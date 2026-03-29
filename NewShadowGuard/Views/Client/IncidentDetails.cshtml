@@ -1,0 +1,63 @@
+﻿@model NewShadowGuard.Models.Incident
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="mb-4">
+    <a asp-action="Incidents" class="btn btn-outline-secondary">← Назад к инцидентам</a>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">🚨 @Model.Title</h5>
+        <span class="badge
+            @(Model.Severity == "Critical" ? "bg-danger" :
+                            Model.Severity == "High" ? "bg-warning" :
+                            Model.Severity == "Medium" ? "bg-info" : "bg-secondary")">
+            @Model.Severity
+        </span>
+    </div>
+    <div class="card-body">
+        <p><strong>Описание:</strong> @Model.Description</p>
+        <p>
+            <strong>Статус:</strong>
+            <span class="badge
+                @(Model.Status == "New" ? "bg-warning" :
+                                    Model.Status == "InProgress" ? "bg-info" :
+                                    Model.Status == "Resolved" ? "bg-success" : "bg-secondary")">
+                @(Model.Status == "InProgress" ? "В работе" :
+                  Model.Status == "New" ? "Новый" :
+                  Model.Status == "Resolved" ? "Решён" : Model.Status)
+            </span>
+        </p>
+        <p><strong>Создан:</strong> @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+        <p><strong>Обновлён:</strong> @Model.UpdatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+        
+        @if (Model.Log != null)
+        {
+            <hr>
+            <h6>📋 Связанные логи:</h6>
+            <p><strong>Тип события:</strong> @Model.Log.EventType</p>
+            <pre class="bg-light p-3">@Model.Log.RawData</pre>
+        }
+
+        @if (Model.Comments?.Count > 0)
+        {
+            <hr>
+            <h6>💬 Комментарии от аналитиков:</h6>
+            @foreach (var comment in Model.Comments.OrderByDescending(c => c.CreatedAt))
+            {
+                <div class="border-bottom pb-2 mb-2">
+                    <small class="text-muted">@comment.User?.FullName - @comment.CreatedAt.ToString("dd.MM HH:mm")</small>
+                    <p class="mb-0 mt-1">@comment.Text</p>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle"></i>
+    <strong>Примечание:</strong> Вы просматриваете инцидент в режиме только для чтения.
+    Для изменений обратитесь к вашему аналитику SOC.
+</div>

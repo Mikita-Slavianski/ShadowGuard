@@ -1,0 +1,79 @@
+﻿@model NewShadowGuard.Models.User
+@{
+    ViewData["Title"] = "Редактировать пользователя";
+}
+
+<h2>✏️ Редактировать пользователя</h2>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <h5>Ошибки валидации:</h5>
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+<form asp-action="EditUser" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UserId" />
+    <input type="hidden" asp-for="CreatedAt" />
+    <input type="hidden" asp-for="PasswordHash" />
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email *</label>
+                <input asp-for="Email" class="form-control" required>
+                    <span asp-validation-for="Email" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="FullName" class="form-label">Полное имя *</label>
+                    <input asp-for="FullName" class="form-control" required>
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label">Роль *</label>
+                        <select asp-for="Role" class="form-select" required>
+                            <option value="Admin">Admin</option>
+                            <option value="Analyst">Analyst</option>
+                            <option value="Client">Client</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="TenantId" class="form-label">Тенант</label>
+                        <select asp-for="TenantId" class="form-select">
+                            <option value="">— Без тенанта —</option>
+                            @foreach (var tenant in ViewBag.Tenants)
+                            {
+                                <option value="@tenant.TenantId">@tenant.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input asp-for="MfaEnabled" class="form-check-input">
+                            <label asp-for="MfaEnabled" class="form-check-label">Включить MFA</label>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input asp-for="IsActive" class="form-check-input">
+                                <label asp-for="IsActive" class="form-check-label">Активен</label>
+                            </div>
+                        </div>
+                    </div>
+    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Сохранить изменения
+                    </button>
+                    <a asp-action="Users" class="btn btn-secondary">Отмена</a>
+                </form>
+
+                @section Scripts {
+                    @{
+                        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                    }
+                }

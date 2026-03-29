@@ -1,0 +1,50 @@
+﻿@{
+    ViewData["Title"] = "Вход в систему";
+}
+
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 100vh;">
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">🔐 CyberSecurity App</h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title text-center mb-4">Вход в систему</h5>
+                    
+                    <form asp-action="Login" method="post">
+                        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   placeholder="admin@system.local" required autofocus>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Пароль</label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   placeholder="password123" required>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Войти</button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-muted small">
+                        <strong>Тестовые учётные записи:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><code>admin@system.local</code> — Администратор</li>
+                            <li><code>analyst1@techprotect.ru</code> — Аналитик</li>
+                            <li><code>client1@techprotect.ru</code> — Клиент</li>
+                        </ul>
+                        <p class="mb-0 mt-2">Пароль для всех: <code>password123</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

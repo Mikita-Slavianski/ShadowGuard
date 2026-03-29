@@ -1,0 +1,87 @@
+﻿@model List<NewShadowGuard.Models.Incident>
+@{
+    ViewData["Title"] = "Инциденты";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>🚨 Инциденты</h2>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Incidents" method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все</option>
+                    <option value="New" selected=@(ViewBag.Status == "New" ? "selected" : "")>Новый</option>
+                    <option value="InProgress" selected=@(ViewBag.Status == "InProgress" ? "selected" : "")>В работе</option>
+                    <option value="Resolved" selected=@(ViewBag.Status == "Resolved" ? "selected" : "")>Решён</option>
+                    <option value="FalsePositive" selected=@(ViewBag.Status == "FalsePositive" ? "selected" : "")>Ложное срабатывание</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Критичность</label>
+                <select name="severity" class="form-select">
+                    <option value="">Все</option>
+                    <option value="Critical" selected=@(ViewBag.Severity == "Critical" ? "selected" : "")>Critical</option>
+                    <option value="High" selected=@(ViewBag.Severity == "High" ? "selected" : "")>High</option>
+                    <option value="Medium" selected=@(ViewBag.Severity == "Medium" ? "selected" : "")>Medium</option>
+                    <option value="Low" selected=@(ViewBag.Severity == "Low" ? "selected" : "")>Low</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Применить фильтры</button>
+                <a asp-action="Incidents" class="btn btn-secondary ms-2">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Тенант</th>
+            <th>Критичность</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var incident in Model)
+        {
+            <tr>
+                <td>@incident.IncidentId</td>
+                <td>@incident.Title</td>
+                <td>@incident.Tenant?.Name</td>
+                <td>
+                    <span class="badge 
+                        @(incident.Severity == "Critical" ? "bg-danger" : 
+                          incident.Severity == "High" ? "bg-warning" : 
+                          incident.Severity == "Medium" ? "bg-info" : "bg-secondary")">
+                        @incident.Severity
+                    </span>
+                </td>
+                <td>
+                    <span class="badge 
+                        @(incident.Status == "New" ? "bg-warning" : 
+                          incident.Status == "InProgress" ? "bg-info" : 
+                          incident.Status == "Resolved" ? "bg-success" : "bg-secondary")">
+                        @(incident.Status == "InProgress" ? "В работе" : 
+                          incident.Status == "New" ? "Новый" : 
+                          incident.Status == "Resolved" ? "Решён" : incident.Status)
+                    </span>
+                </td>
+                <td>@incident.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>
+                    <a asp-action="IncidentDetails" asp-route-id="@incident.IncidentId" 
+                       class="btn btn-sm btn-outline-primary">👁️</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

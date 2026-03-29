@@ -1,0 +1,85 @@
+﻿@model NewShadowGuard.Controllers.TestViewModel
+
+@{
+    ViewData["Title"] = "Тест подключения к БД";
+}
+
+<div class="container mt-5">
+    <h1>🔍 Тест подключения к базе данных</h1>
+    <hr />
+    
+    <div class="alert @(Model.ConnectionStatus.Contains("✅") ? "alert-success" : "alert-danger")">
+        <h4>@Model.ConnectionStatus</h4>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Тенанты</h5>
+                    <h3 class="text-primary">@Model.TenantCount</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Пользователи</h5>
+                    <h3 class="text-primary">@Model.UserCount</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Активы</h5>
+                    <h3 class="text-primary">@Model.AssetCount</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Логи</h5>
+                    <h3 class="text-primary">@Model.LogCount</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Инциденты</h5>
+                    <h3 class="text-primary">@Model.IncidentCount</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    @if (Model.Users != null && Model.Users.Any())
+    {
+        <h3 class="mt-4">Пользователи в БД:</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Имя</th>
+                    <th>Роль</th>
+                    <th>Тенант</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>@user.UserId</td>
+                        <td>@user.Email</td>
+                        <td>@user.FullName</td>
+                        <td><span class="badge bg-info">@user.Role</span></td>
+                        <td>@(user.Tenant?.Name ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

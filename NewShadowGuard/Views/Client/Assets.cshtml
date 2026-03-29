@@ -1,0 +1,44 @@
+﻿@model List<NewShadowGuard.Models.Asset>
+@{
+    ViewData["Title"] = "Мои активы";
+}
+
+<h2 class="mb-4">💻 Мои активы</h2>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    Здесь отображаются все активы вашей компании, находящиеся под защитой.
+</div>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Тип</th>
+            <th>IP</th>
+            <th>ОС</th>
+            <th>Критичность</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var asset in Model)
+        {
+            <tr>
+                <td>@asset.AssetId</td>
+                <td>@asset.Name</td>
+                <td>@asset.Type</td>
+                <td><code>@asset.IpAddress</code></td>
+                <td>@asset.Os</td>
+                <td>
+                    <span class="badge
+                        @(asset.Criticality == "Critical" ? "bg-danger" :
+                                                    asset.Criticality == "High" ? "bg-warning" :
+                                                    asset.Criticality == "Medium" ? "bg-info" : "bg-secondary")">
+                        @asset.Criticality
+                    </span>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

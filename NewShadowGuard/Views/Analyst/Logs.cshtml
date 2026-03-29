@@ -1,0 +1,39 @@
+﻿@model List<NewShadowGuard.Models.Log>
+@{
+    ViewData["Title"] = "Логи";
+}
+
+<h2>📋 Логи событий</h2>
+
+@if (ViewBag.AssetId != null)
+{
+    <a asp-action="Logs" class="btn btn-outline-secondary mb-3">← Все логи</a>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Время</th>
+            <th>Актив</th>
+            <th>Тип события</th>
+            <th>Данные</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var log in Model)
+        {
+            <tr>
+                <td>@log.Timestamp.ToString("dd.MM.yyyy HH:mm:ss")</td>
+                <td>@log.Asset?.Name</td>
+                <td><span class="badge bg-info">@log.EventType</span></td>
+                <td>
+                    <small>
+                        @(log.RawData != null && log.RawData.Length > 100
+                            ? log.RawData.Substring(0, 100) + "..."
+                            : log.RawData)
+                    </small>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

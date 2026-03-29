@@ -1,0 +1,58 @@
+﻿@model List<NewShadowGuard.Models.AuditLog>
+@{
+    ViewData["Title"] = "Журнал аудита";
+}
+
+<h2>📝 Журнал аудита</h2>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (Model == null || Model.Count == 0)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Записей в журнале аудита пока нет
+    </div>
+}
+else
+{
+    <!-- Фильтры -->
+    <div class="mb-3">
+        <a asp-action="AuditLog" class="btn @(ViewBag.EntityType == null ? "btn-primary" : "btn-outline-primary")">Все</a>
+        <a asp-action="AuditLog" asp-route-entityType="User" class="btn @(ViewBag.EntityType == "User" ? "btn-primary" : "btn-outline-primary")">Пользователи</a>
+        <a asp-action="AuditLog" asp-route-entityType="Tenant" class="btn @(ViewBag.EntityType == "Tenant" ? "btn-primary" : "btn-outline-primary")">Тенанты</a>
+        <a asp-action="AuditLog" asp-route-entityType="Incident" class="btn @(ViewBag.EntityType == "Incident" ? "btn-primary" : "btn-outline-primary")">Инциденты</a>
+    </div>
+
+    <!-- Таблица -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Время</th>
+                <th>Пользователь</th>
+                <th>Действие</th>
+                <th>Сущность</th>
+                <th>ID сущности</th>
+                <th>Детали</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in Model)
+            {
+                <tr>
+                    <td>@log.Timestamp.ToString("dd.MM.yyyy HH:mm")</td>
+                    <td>@(log.User?.FullName ?? "Система")</td>
+                    <td><span class="badge bg-info">@log.Action</span></td>
+                    <td>@(log.EntityType ?? "—")</td>
+                    <td>@(log.EntityId?.ToString() ?? "—")</td>
+                    <td>@(log.NewValue ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

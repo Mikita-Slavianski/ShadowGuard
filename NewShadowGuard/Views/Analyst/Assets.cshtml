@@ -1,0 +1,57 @@
+﻿@model List<NewShadowGuard.Models.Asset>
+@{
+    ViewData["Title"] = "Активы";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>💻 Активы</h2>
+    <a asp-action="CreateAsset" class="btn btn-success">➕ Создать</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Тип</th>
+            <th>IP</th>
+            <th>ОС</th>
+            <th>Критичность</th>
+            <th>Тенант</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var asset in Model)
+        {
+            <tr>
+                <td>@asset.AssetId</td>
+                <td>@asset.Name</td>
+                <td>@asset.Type</td>
+                <td><code>@asset.IpAddress</code></td>
+                <td>@asset.Os</td>
+                <td>
+                    <span class="badge
+                        @(asset.Criticality == "Critical" ? "bg-danger" :
+                                                    asset.Criticality == "High" ? "bg-warning" :
+                                                    asset.Criticality == "Medium" ? "bg-info" : "bg-secondary")">
+                        @asset.Criticality
+                    </span>
+                </td>
+                <td>@asset.Tenant?.Name</td>
+                <td>
+                    <a asp-action="EditAsset" asp-route-id="@asset.AssetId" class="btn btn-sm btn-outline-primary">✏️</a>
+                    <a asp-action="Logs" asp-route-assetId="@asset.AssetId" class="btn btn-sm btn-outline-secondary">📋</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

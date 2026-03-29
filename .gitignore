@@ -1,0 +1,26 @@
+# Файлы сборки
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Пользовательские настройки
+appsettings.Development.json
+appsettings.local.json
+
+# Логи и временные файлы
+*.log
+logs/
+temp/
+
+# Node modules (если будете использовать npm)
+node_modules/
+
+# Секреты и ключи
+**/secrets.json
+**/.env

@@ -1,0 +1,72 @@
+﻿@model List<NewShadowGuard.Models.Incident>
+@{
+    ViewData["Title"] = "Мои инциденты";
+}
+
+<h2 class="mb-4">🚨 Мои инциденты</h2>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Incidents" method="get" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все</option>
+                    <option value="New" selected=@(ViewBag.Status == "New" ? "selected" : "")>Новый</option>
+                    <option value="InProgress" selected=@(ViewBag.Status == "InProgress" ? "selected" : "")>В работе</option>
+                    <option value="Resolved" selected=@(ViewBag.Status == "Resolved" ? "selected" : "")>Решён</option>
+                </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Применить</button>
+                <a asp-action="Incidents" class="btn btn-secondary ms-2">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Критичность</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var incident in Model)
+        {
+            <tr>
+                <td>@incident.IncidentId</td>
+                <td>@incident.Title</td>
+                <td>
+                    <span class="badge 
+                        @(incident.Severity == "Critical" ? "bg-danger" : 
+                          incident.Severity == "High" ? "bg-warning" : 
+                          incident.Severity == "Medium" ? "bg-info" : "bg-secondary")">
+                        @incident.Severity
+                    </span>
+                </td>
+                <td>
+                    <span class="badge 
+                        @(incident.Status == "New" ? "bg-warning" : 
+                          incident.Status == "InProgress" ? "bg-info" : 
+                          incident.Status == "Resolved" ? "bg-success" : "bg-secondary")">
+                        @(incident.Status == "InProgress" ? "В работе" : 
+                          incident.Status == "New" ? "Новый" : 
+                          incident.Status == "Resolved" ? "Решён" : incident.Status)
+                    </span>
+                </td>
+                <td>@incident.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>
+                    <a asp-action="IncidentDetails" asp-route-id="@incident.IncidentId" 
+                       class="btn btn-sm btn-outline-primary">👁️</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

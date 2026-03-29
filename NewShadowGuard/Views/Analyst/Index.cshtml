@@ -1,0 +1,137 @@
+﻿@model CyberSecurityApp.Controllers.AnalystDashboardViewModel
+@{
+    ViewData["Title"] = "Панель аналитика";
+}
+
+<h2 class="mb-4">🔍 Панель аналитика SOC</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Карточки статистики -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h3>@Model.TotalIncidents</h3>
+                <p class="mb-0">Всего инцидентов</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-warning">
+            <div class="card-body text-center">
+                <h3>@Model.NewIncidents</h3>
+                <p class="mb-0">Новые</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-info">
+            <div class="card-body text-center">
+                <h3>@Model.InProgressIncidents</h3>
+                <p class="mb-0">В работе</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-success">
+            <div class="card-body text-center">
+                <h3>@Model.ResolvedIncidents</h3>
+                <p class="mb-0">Решены</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-danger">
+            <div class="card-body text-center">
+                <h3>@Model.CriticalIncidents</h3>
+                <p class="mb-0">Критические</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <a asp-action="Logs" class="card text-white bg-secondary text-decoration-none">
+            <div class="card-body text-center">
+                <h3>📋</h3>
+                <p class="mb-0">Логи</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Последние инциденты -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">🚨 Последние инциденты</h5>
+        <a asp-action="Incidents" class="btn btn-sm btn-outline-primary">Все инциденты →</a>
+    </div>
+    <div class="card-body">
+        @if (Model.RecentIncidents.Count == 0)
+        {
+            <p class="text-muted mb-0">Инцидентов пока нет</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Критичность</th>
+                        <th>Статус</th>
+                        <th>Дата</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var incident in Model.RecentIncidents)
+                    {
+                        <tr>
+                            <td>
+                                <a asp-action="IncidentDetails" asp-route-id="@incident.IncidentId">
+                                    @incident.Title
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    @(incident.Severity == "Critical" ? "bg-danger" :
+                                                                            incident.Severity == "High" ? "bg-warning" :
+                                                                            incident.Severity == "Medium" ? "bg-info" : "bg-secondary")">
+                                    @incident.Severity
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    @(incident.Status == "New" ? "bg-warning" :
+                                                                            incident.Status == "InProgress" ? "bg-info" :
+                                                                            incident.Status == "Resolved" ? "bg-success" : "bg-secondary")">
+                                    @(incident.Status == "InProgress" ? "В работе" :
+                                      incident.Status == "New" ? "Новый" :
+                                      incident.Status == "Resolved" ? "Решён" : incident.Status)
+                                </span>
+                            </td>
+                            <td>@incident.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="row">
+    <div class="col-md-4">
+        <a asp-action="Incidents" class="btn btn-primary w-100">🚨 Все инциденты</a>
+    </div>
+    <div class="col-md-4">
+        <a asp-action="Assets" class="btn btn-success w-100">💻 Активы</a>
+    </div>
+    <div class="col-md-4">
+        <a asp-action="Logs" class="btn btn-secondary w-100">📋 Логи</a>
+    </div>
+</div>

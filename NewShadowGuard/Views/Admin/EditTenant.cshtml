@@ -1,0 +1,39 @@
+﻿@model NewShadowGuard.Models.Tenant
+@{
+    ViewData["Title"] = "Редактировать тенант";
+}
+
+<h2>✏️ Редактировать тенант</h2>
+
+<form asp-action="EditTenant" method="post">
+    <input type="hidden" asp-for="TenantId" />
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Название компании</label>
+                <input asp-for="Name" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Country" class="form-label">Страна</label>
+                    <input asp-for="Country" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Subscription" class="form-label">Тарифный план</label>
+                        <select asp-for="Subscription" class="form-select">
+                            <option value="Basic">Basic</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Enterprise">Enterprise</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Status" class="form-label">Статус</label>
+                        <select asp-for="Status" class="form-select">
+                            <option value="Active">Active</option>
+                            <option value="Blocked">Blocked</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <a asp-action="Tenants" class="btn btn-secondary">Отмена</a>
+        </form>
