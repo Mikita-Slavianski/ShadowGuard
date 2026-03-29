@@ -7,8 +7,32 @@
 
 @if (ViewBag.AssetId != null)
 {
-    <a asp-action="Logs" class="btn btn-outline-secondary mb-3">← Все логи</a>
+    <div class="alert alert-info">
+        <i class="bi bi-filter"></i> Фильтр по активу
+        <a asp-action="Logs" class="btn btn-sm btn-outline-secondary ms-3">← Все логи</a>
+    </div>
 }
+
+<!-- Панель экспорта -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0">📊 Экспорт логов</h5>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group" role="group">
+                    <a asp-action="ExportLogs" asp-route-format="excel" asp-route-assetId="@ViewBag.AssetId" class="btn btn-success">
+                        📄 Excel
+                    </a>
+                    <a asp-action="ExportLogs" asp-route-format="csv" asp-route-assetId="@ViewBag.AssetId" class="btn btn-info">
+                        📄 CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <table class="table table-striped">
     <thead>
@@ -37,3 +61,7 @@
         }
     </tbody>
 </table>
+
+<div class="text-muted">
+    Показано последних @Model.Count записей из 1000
+</div>

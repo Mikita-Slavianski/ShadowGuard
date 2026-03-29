@@ -4,6 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using NewShadowGuard.Attributes;
 using NewShadowGuard.Data;
 using NewShadowGuard.Models;
+using NewShadowGuard.Services;
+using ClosedXML.Excel;
+using CsvHelper;
+using CsvHelper.Configuration;
+using System.Globalization;
 
 namespace NewShadowGuard.Controllers
 {
@@ -362,7 +367,76 @@ namespace NewShadowGuard.Controllers
         }
 
         #endregion
+
+        #region Экспорт и очистка аудита
+
+        public async Task<IActionResult> ExportAuditLog(string format = "excel")
+        {
+            var logs = await _context.AuditLogs
+                .Include(a => a.User)
+                .OrderByDescending(a => a.Timestamp)
+                .Take(1000)
+                .Select(a => new AuditLogExportDto
+                {
+                    Timestamp = a.Timestamp,
+                    UserName = a.User != null ? a.User.FullName : "System",
+                    Action = a.Action,
+                    EntityType = a.EntityType,
+                    EntityId = a.EntityId,
+                    Details = a.NewValue
+                })
+                .ToListAsync();
+
+            var exportService = new ExportService();
+
+            if (format.ToLower() == "excel")
+            {
+                var fileBytes = exportService.ExportToExcel(logs, "AuditLog");
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"AuditLog_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+            }
+            else if (format.ToLower() == "csv")
+            {
+                var fileBytes = exportService.ExportToCsv(logs);
+                return File(fileBytes, "text/csv", $"AuditLog_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+
+            return RedirectToAction(nameof(AuditLog));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ClearAuditLog()
+        {
+            var userId = GetCurrentUserUserId();
+
+            // Удаляем все записи аудита
+            var logs = await _context.AuditLogs.ToListAsync();
+            _context.AuditLogs.RemoveRange(logs);
+            await _context.SaveChangesAsync();
+
+            // Логируем очистку
+            await LogAuditAction("Clear", "AuditLog", null,
+                $"Журнал аудита очищен. Удалено записей: {logs.Count}");
+
+            TempData["Success"] = $"Журнал аудита очищен. Удалено {logs.Count} записей.";
+            return RedirectToAction(nameof(AuditLog));
+        }
+
+        #endregion
+
+        #region Вспомогательные методы
+
+        private int? GetCurrentUserUserId()
+        {
+            var userId = HttpContext.Session.GetString("UserId");
+            return string.IsNullOrEmpty(userId) ? null : int.Parse(userId);
+        }
+
+        #endregion
     }
+
+
 
     // ViewModel для дашборда
     public class AdminDashboardViewModel
@@ -374,5 +448,15 @@ namespace NewShadowGuard.Controllers
         public int ActiveIncidents { get; set; }
         public List<Tenant> RecentTenants { get; set; }
         public List<User> RecentUsers { get; set; }
+    }
+
+    public class AuditLogExportDto
+    {
+        public DateTime Timestamp { get; set; }
+        public string UserName { get; set; }
+        public string Action { get; set; }
+        public string EntityType { get; set; }
+        public int? EntityId { get; set; }
+        public string Details { get; set; }
     }
 }

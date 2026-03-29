@@ -5,6 +5,14 @@
 
 <h2>📝 Журнал аудита</h2>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show">
@@ -21,12 +29,41 @@
 }
 else
 {
+    <!-- Панель действий -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">📊 Экспорт данных</h5>
+                </div>
+                <div class="col-md-6 text-end">
+                    <div class="btn-group" role="group">
+                        <a asp-action="ExportAuditLog" asp-route-format="excel" class="btn btn-success">
+                            📄 Excel
+                        </a>
+                        <a asp-action="ExportAuditLog" asp-route-format="csv" class="btn btn-info">
+                            📄 CSV
+                        </a>
+                    </div>
+                    <form asp-action="ClearAuditLog" method="post" style="display:inline"
+                          onsubmit="return confirm('⚠️ Вы уверены? Все записи журнала будут удалены безвозвратно!')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">
+                            🗑️ Очистить журнал
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Фильтры -->
     <div class="mb-3">
         <a asp-action="AuditLog" class="btn @(ViewBag.EntityType == null ? "btn-primary" : "btn-outline-primary")">Все</a>
         <a asp-action="AuditLog" asp-route-entityType="User" class="btn @(ViewBag.EntityType == "User" ? "btn-primary" : "btn-outline-primary")">Пользователи</a>
         <a asp-action="AuditLog" asp-route-entityType="Tenant" class="btn @(ViewBag.EntityType == "Tenant" ? "btn-primary" : "btn-outline-primary")">Тенанты</a>
         <a asp-action="AuditLog" asp-route-entityType="Incident" class="btn @(ViewBag.EntityType == "Incident" ? "btn-primary" : "btn-outline-primary")">Инциденты</a>
+        <a asp-action="AuditLog" asp-route-entityType="Asset" class="btn @(ViewBag.EntityType == "Asset" ? "btn-primary" : "btn-outline-primary")">Активы</a>
     </div>
 
     <!-- Таблица -->
@@ -55,4 +92,8 @@ else
             }
         </tbody>
     </table>
+    
+    <div class="text-muted">
+        Показано последних @Model.Count записей из 1000
+    </div>
 }

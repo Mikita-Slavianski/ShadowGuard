@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NewShadowGuard.Attributes;
 using NewShadowGuard.Data;
 using NewShadowGuard.Models;
+using NewShadowGuard.Services;
 
 namespace CyberSecurityApp.Controllers
 {
@@ -397,6 +398,51 @@ namespace CyberSecurityApp.Controllers
         }
 
         #endregion
+
+        #region Экспорт логов
+
+        public async Task<IActionResult> ExportLogs(string format = "excel", int? assetId = null)
+        {
+            var query = _context.Logs
+                .Include(l => l.Asset)
+                .AsQueryable();
+
+            if (assetId.HasValue)
+            {
+                query = query.Where(l => l.AssetId == assetId);
+            }
+
+            var logs = await query
+                .OrderByDescending(l => l.Timestamp)
+                .Take(1000)
+                .Select(l => new LogExportDto
+                {
+                    Timestamp = l.Timestamp,
+                    AssetName = l.Asset != null ? l.Asset.Name : "Unknown",
+                    AssetType = l.Asset != null ? l.Asset.Type : "",
+                    EventType = l.EventType,
+                    RawData = l.RawData
+                })
+                .ToListAsync();
+
+            var exportService = new ExportService();
+
+            if (format.ToLower() == "excel")
+            {
+                var fileBytes = exportService.ExportToExcel(logs, "Logs");
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"Logs_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+            }
+            else if (format.ToLower() == "csv")
+            {
+                var fileBytes = exportService.ExportToCsv(logs);
+                return File(fileBytes, "text/csv", $"Logs_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+
+            return RedirectToAction(nameof(Logs));
+        }
+
+        #endregion
     }
 
     public class AnalystDashboardViewModel
@@ -407,5 +453,14 @@ namespace CyberSecurityApp.Controllers
         public int ResolvedIncidents { get; set; }
         public int CriticalIncidents { get; set; }
         public List<Incident> RecentIncidents { get; set; }
+    }
+
+    public class LogExportDto
+    {
+        public DateTime Timestamp { get; set; }
+        public string AssetName { get; set; }
+        public string AssetType { get; set; }
+        public string EventType { get; set; }
+        public string RawData { get; set; }
     }
 }

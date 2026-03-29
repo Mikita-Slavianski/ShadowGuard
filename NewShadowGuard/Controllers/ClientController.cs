@@ -113,6 +113,12 @@ namespace NewShadowGuard.Controllers
             return string.IsNullOrEmpty(tenantId) ? null : int.Parse(tenantId);
         }
 
+        private int? GetCurrentUserUserId()
+        {
+            var userId = HttpContext.Session.GetString("UserId");
+            return string.IsNullOrEmpty(userId) ? null : int.Parse(userId);
+        }
+
         #endregion
     }
 
