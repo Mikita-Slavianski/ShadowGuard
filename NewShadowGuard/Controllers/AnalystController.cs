@@ -158,29 +158,64 @@ namespace CyberSecurityApp.Controllers
         public async Task<IActionResult> CreateAsset()
         {
             ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+
+            // Если не админ, сразу устанавливаем TenantId
+            if (!IsAdmin())
+            {
+                var tenantId = GetCurrentUserTenantId();
+                ViewBag.DefaultTenantId = tenantId;
+            }
+
             return View();
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAsset(Asset asset)
         {
+            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+
+            // Если не админ, привязываем к тенанту аналитика
+            if (!IsAdmin())
+            {
+                asset.TenantId = GetCurrentUserTenantId();
+            }
+
+            // Проверка на обязательные поля
+            if (string.IsNullOrEmpty(asset.Name))
+            {
+                ModelState.AddModelError("Name", "Название обязательно");
+            }
+            if (string.IsNullOrEmpty(asset.Type))
+            {
+                ModelState.AddModelError("Type", "Тип обязателен");
+            }
+            if (string.IsNullOrEmpty(asset.Criticality))
+            {
+                ModelState.AddModelError("Criticality", "Критичность обязательна");
+            }
+
             if (ModelState.IsValid)
             {
-                // Если не админ, привязываем к тенанту аналитика
-                if (!IsAdmin())
+                try
                 {
-                    asset.TenantId = GetCurrentUserTenantId();
-                }
+                    asset.CreatedAt = DateTime.UtcNow;
+                    _context.Assets.Add(asset);
+                    await _context.SaveChangesAsync();
 
-                asset.CreatedAt = DateTime.UtcNow;
-                _context.Assets.Add(asset);
-                await _context.SaveChangesAsync();
-                await LogAuditAction("Create", "Asset", asset.AssetId,
-                    $"Создан актив: {asset.Name}");
-                TempData["Success"] = "Актив успешно создан";
-                return RedirectToAction(nameof(Assets));
+                    await LogAuditAction("Create", "Asset", asset.AssetId,
+                        $"Создан актив: {asset.Name}");
+
+                    TempData["Success"] = "Актив успешно создан";
+                    return RedirectToAction(nameof(Assets));
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Ошибка при создании: {ex.Message}");
+                    return View(asset);
+                }
             }
-            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+
             return View(asset);
         }
 
@@ -188,31 +223,79 @@ namespace CyberSecurityApp.Controllers
         {
             var asset = await _context.Assets.FindAsync(id);
             if (asset == null) return NotFound();
+
+            // Проверка доступа: аналитик может редактировать только активы своего тенанта
+            if (!IsAdmin())
+            {
+                var tenantId = GetCurrentUserTenantId();
+                if (tenantId.HasValue && asset.TenantId != tenantId)
+                {
+                    return RedirectToAction("AccessDenied", "Account");
+                }
+            }
+
             ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
             return View(asset);
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAsset(Asset asset)
         {
+            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+
+            // Проверка доступа
+            if (!IsAdmin())
+            {
+                var tenantId = GetCurrentUserTenantId();
+                if (tenantId.HasValue && asset.TenantId != tenantId)
+                {
+                    return RedirectToAction("AccessDenied", "Account");
+                }
+            }
+
+            // Проверка на обязательные поля
+            if (string.IsNullOrEmpty(asset.Name))
+            {
+                ModelState.AddModelError("Name", "Название обязательно");
+            }
+            if (string.IsNullOrEmpty(asset.Type))
+            {
+                ModelState.AddModelError("Type", "Тип обязателен");
+            }
+            if (string.IsNullOrEmpty(asset.Criticality))
+            {
+                ModelState.AddModelError("Criticality", "Критичность обязательна");
+            }
+
             if (ModelState.IsValid)
             {
-                var existing = await _context.Assets.FindAsync(asset.AssetId);
-                if (existing != null)
+                try
                 {
+                    var existing = await _context.Assets.FindAsync(asset.AssetId);
+                    if (existing == null) return NotFound();
+
                     existing.Name = asset.Name;
                     existing.Type = asset.Type;
                     existing.IpAddress = asset.IpAddress;
                     existing.Os = asset.Os;
                     existing.Criticality = asset.Criticality;
+
                     await _context.SaveChangesAsync();
+
                     await LogAuditAction("Update", "Asset", asset.AssetId,
                         $"Обновлён актив: {asset.Name}");
+
                     TempData["Success"] = "Актив успешно обновлён";
+                    return RedirectToAction(nameof(Assets));
                 }
-                return RedirectToAction(nameof(Assets));
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Ошибка при обновлении: {ex.Message}");
+                    return View(asset);
+                }
             }
-            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+
             return View(asset);
         }
 

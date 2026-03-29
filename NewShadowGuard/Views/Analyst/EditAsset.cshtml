@@ -5,14 +5,31 @@
 
 <h2>✏️ Редактировать актив</h2>
 
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <h5>Ошибки валидации:</h5>
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
 <form asp-action="EditAsset" method="post">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="AssetId" />
+    <input type="hidden" asp-for="CreatedAt" />
+    <input type="hidden" asp-for="TenantId" />
+    
     <div class="row">
         <div class="col-md-6">
             <div class="mb-3">
                 <label asp-for="Name" class="form-label">Название *</label>
                 <input asp-for="Name" class="form-control" required>
+                    <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
                 <div class="mb-3">
                     <label asp-for="Type" class="form-label">Тип *</label>
@@ -22,6 +39,7 @@
                         <option value="Network">Network</option>
                         <option value="Database">Database</option>
                     </select>
+                    <span asp-validation-for="Type" class="text-danger"></span>
                 </div>
                 <div class="mb-3">
                     <label asp-for="IpAddress" class="form-label">IP адрес</label>
@@ -39,9 +57,19 @@
                                 <option value="High">High</option>
                                 <option value="Critical">Critical</option>
                             </select>
+                            <span asp-validation-for="Criticality" class="text-danger"></span>
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Сохранить</button>
+    
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Сохранить изменения
+                </button>
                 <a asp-action="Assets" class="btn btn-secondary">Отмена</a>
             </form>
+
+            @section Scripts {
+                @{
+                    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                }
+            }

@@ -5,13 +5,28 @@
 
 <h2>➕ Создать актив</h2>
 
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <h5>Ошибки валидации:</h5>
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
 <form asp-action="CreateAsset" method="post">
     @Html.AntiForgeryToken()
+    
     <div class="row">
         <div class="col-md-6">
             <div class="mb-3">
                 <label asp-for="Name" class="form-label">Название *</label>
                 <input asp-for="Name" class="form-control" required>
+                    <span asp-validation-for="Name" class="text-danger"></span>
                 </div>
                 <div class="mb-3">
                     <label asp-for="Type" class="form-label">Тип *</label>
@@ -22,10 +37,11 @@
                         <option value="Network">Network</option>
                         <option value="Database">Database</option>
                     </select>
+                    <span asp-validation-for="Type" class="text-danger"></span>
                 </div>
                 <div class="mb-3">
                     <label asp-for="IpAddress" class="form-label">IP адрес</label>
-                    <input asp-for="IpAddress" class="form-control">
+                    <input asp-for="IpAddress" class="form-control" placeholder="192.168.1.1">
                     </div>
                     <div class="mb-3">
                         <label asp-for="Os" class="form-label">Операционная система</label>
@@ -40,7 +56,9 @@
                                 <option value="High">High</option>
                                 <option value="Critical">Critical</option>
                             </select>
+                            <span asp-validation-for="Criticality" class="text-danger"></span>
                         </div>
+            
                         @if (User.IsInRole("Admin"))
                         {
                             <div class="mb-3">
@@ -54,8 +72,26 @@
                                 </select>
                             </div>
                         }
+                        else
+                        {
+                            // Для аналитика TenantId устанавливается автоматически
+                            <input type="hidden" asp-for="TenantId" value="@ViewBag.DefaultTenantId" />
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                Актив будет привязан к вашему тенанту автоматически.
+                            </div>
+                        }
                     </div>
                 </div>
-                <button type="submit" class="btn btn-success">Создать</button>
+    
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Создать актив
+                </button>
                 <a asp-action="Assets" class="btn btn-secondary">Отмена</a>
             </form>
+
+            @section Scripts {
+                @{
+                    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                }
+            }

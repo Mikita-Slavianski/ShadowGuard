@@ -12,24 +12,24 @@ namespace NewShadowGuard.Models
         [Column("tenant_id")]
         public int? TenantId { get; set; }
 
-        [Column("name")]
+        [Required(ErrorMessage = "Название обязательно")]
         public string Name { get; set; }
-        [Column("type")]
+
+        [Required(ErrorMessage = "Тип обязателен")]
         public string Type { get; set; }
 
         [Column("ip_address")]
-        public string IpAddress { get; set; }
+        public string? IpAddress { get; set; }
 
-        [Column("os")]
-        public string Os { get; set; }
-        [Column("criticality")]
+        public string? Os { get; set; }
+
+        [Required(ErrorMessage = "Критичность обязательна")]
         public string Criticality { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
 
-        // Навигационное свойство
         [ForeignKey("TenantId")]
-        public Tenant Tenant { get; set; }
+        public Tenant? Tenant { get; set; }
     }
 }
