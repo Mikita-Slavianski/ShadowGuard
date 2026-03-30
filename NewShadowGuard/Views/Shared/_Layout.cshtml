@@ -3,9 +3,64 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - CyberSecurity App</title>
+    <title>@ViewData["Title"] - Shadow Guard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+        <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Shadow Guard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* Кастомные стили */
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .btn {
+            border-radius: 6px;
+        }
+        .badge {
+            padding: 0.4em 0.6em;
+            font-weight: 500;
+        }
+        .alert {
+            border-radius: 8px;
+            border: none;
+        }
+        /* Анимация для важных элементов */
+        @@keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .badge.bg-danger {
+            animation: pulse 2s infinite;
+        }
+
+        /* Footer ссылки */
+footer a:hover {
+    color: #fff !important;
+    text-decoration: underline !important;
+}
+    </style>
 </head>
 <body>
     @{
@@ -19,7 +74,7 @@
     {
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
-                <a class="navbar-brand" href="#">🛡️ CyberSecurity</a>
+                <a class="navbar-brand" href="#">🛡️ ShadowGuard</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -43,6 +98,9 @@
                                 <a class="nav-link" asp-controller="Client" asp-action="Index">📈 Дашборд</a>
                             </li>
                         }
+                            <li class="nav-item">
+        <a class="nav-link" asp-controller="Home" asp-action="About">ℹ️ О проекте</a>
+    </li>
                     </ul>
                     <ul class="navbar-nav">
                         <li class="nav-item dropdown">
@@ -76,5 +134,35 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
+
+    <footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <h5 class="text-white">🛡️ Shadow Guard</h5>
+                <p class="text-light opacity-75">Система управления кибербезопасностью для SOC-команд</p>
+            </div>
+            <div class="col-md-4">
+                <h5 class="text-white">Быстрые ссылки</h5>
+                <ul class="list-unstyled">
+                    <li><a asp-controller="Home" asp-action="About" class="text-light text-decoration-none hover:text-white">О проекте</a></li>
+                    <li><a href="#" class="text-light text-decoration-none hover:text-white">Документация</a></li>
+                    <li><a href="#" class="text-light text-decoration-none hover:text-white">Поддержка</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4">
+                <h5 class="text-white">Контакты</h5>
+                <p class="text-light opacity-75 mb-0">
+                    📧 support@shadowguard.app<br>
+                    📞 +375 (999) 000-00-00
+                </p>
+            </div>
+        </div>
+        <hr class="my-4 border-light">
+        <div class="text-center text-light opacity-75">
+            <small>&copy; 2025 Shadow Guard. Учебный проект ASP.NET Core MVC</small>
+        </div>
+    </div>
+</footer>
 </body>
 </html>

@@ -65,6 +65,43 @@
     </div>
 </div>
 
+<!-- График инцидентов -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">📊 Динамика инцидентов</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="analystIncidentsChart" height="100"></canvas>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        const ctx = document.getElementById('analystIncidentsChart').getContext('2d');
+        new Chart(ctx, {
+        type: 'line',
+        data: {
+        labels: ['Новые', 'В работе', 'Решены', 'Критические'],
+        datasets: [{
+        label: 'Инциденты',
+        data: [@Model.NewIncidents, @Model.InProgressIncidents, @Model.ResolvedIncidents, @Model.CriticalIncidents],
+        borderColor: 'rgba(13, 110, 253, 1)',
+        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+        tension: 0.4,
+        fill: true
+        }]
+        },
+        options: {
+        responsive: true,
+        scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+        }
+        });
+    </script>
+}
+
 <!-- Последние инциденты -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">

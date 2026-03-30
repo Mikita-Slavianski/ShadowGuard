@@ -1,25 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
-using NewShadowGuard.Models;
-using System.Diagnostics;
+using NewShadowGuard.Attributes;
 
-namespace NewShadowGuard.Controllers
+namespace CyberSecurityApp.Controllers
 {
     public class HomeController : Controller
     {
+        [CustomAuthorize]
         public IActionResult Index()
         {
-            return View();
+            var role = HttpContext.Session.GetString("Role");
+            return RedirectToAction("Index", role == "Admin" ? "Admin" :
+                                                   role == "Analyst" ? "Analyst" : "Client");
         }
 
-        public IActionResult Privacy()
+        public IActionResult About()
         {
             return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }
 }

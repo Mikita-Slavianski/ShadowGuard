@@ -23,27 +23,62 @@
             <th>Название</th>
             <th>Страна</th>
             <th>План</th>
+            <th>Истекает</th>
             <th>Статус</th>
-            <th>Дата создания</th>
             <th>Действия</th>
         </tr>
     </thead>
     <tbody>
         @foreach (var tenant in Model)
         {
+            // Вычисляем статус подписки
+            var daysUntilExpiry = tenant.SubscriptionExpiresAt.HasValue
+                ? (tenant.SubscriptionExpiresAt.Value - DateTime.UtcNow).Days
+                : 0;
+            
+            var expiryClass = daysUntilExpiry <= 0 ? "bg-danger" :
+                              daysUntilExpiry <= 30 ? "bg-warning" : "bg-success";
+            
+            var expiryText = daysUntilExpiry <= 0 ? "Истекла" :
+                             daysUntilExpiry <= 30 ? $"⚠️ {daysUntilExpiry} дн." :
+                             $"✅ {daysUntilExpiry} дн.";
+            
             <tr>
                 <td>@tenant.TenantId</td>
                 <td>@tenant.Name</td>
                 <td>@tenant.Country</td>
                 <td><span class="badge bg-info">@tenant.Subscription</span></td>
                 <td>
+                    @if (tenant.SubscriptionExpiresAt.HasValue)
+                    {
+                        <div class="d-flex align-items-center">
+                            <span class="badge @expiryClass me-2">@expiryText</span>
+                            <small class="text-muted">@tenant.SubscriptionExpiresAt.Value.ToString("dd.MM.yyyy")</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </td>
+                <td>
                     <span class="badge @(tenant.Status == "Active" ? "bg-success" : "bg-danger")">
                         @tenant.Status
                     </span>
                 </td>
-                <td>@tenant.CreatedAt.ToString("dd.MM.yyyy")</td>
                 <td>
                     <a asp-action="EditTenant" asp-route-id="@tenant.TenantId" class="btn btn-sm btn-outline-primary">✏️</a>
+                    
+                    @if (tenant.Status == "Active")
+                    {
+                        <form asp-action="ExtendSubscription" asp-route-tenantId="@tenant.TenantId" method="post" style="display:inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Продлить на 1 год">
+                                📅 +1 год
+                            </button>
+                        </form>
+                    }
+                    
                     <form asp-action="DeleteTenant" asp-route-id="@tenant.TenantId" method="post" style="display:inline" onsubmit="return confirm('Удалить тенант?')">
                         <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
                     </form>

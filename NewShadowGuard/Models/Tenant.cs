@@ -21,5 +21,8 @@ namespace NewShadowGuard.Models
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
+
+        [Column("subscription_expires_at")]
+        public DateTime? SubscriptionExpiresAt { get; set; }
     }
 }

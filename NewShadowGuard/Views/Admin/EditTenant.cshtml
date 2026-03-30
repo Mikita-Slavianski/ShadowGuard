@@ -26,6 +26,23 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label asp-for="SubscriptionExpiresAt" class="form-label">
+                            📅 Дата истечения подписки
+                        </label>
+                        @if (Model.SubscriptionExpiresAt.HasValue)
+                        {
+                            <input asp-for="SubscriptionExpiresAt" type="datetime-local" class="form-control"
+                                   value="@Model.SubscriptionExpiresAt.Value.ToString("yyyy-MM-ddTHH:mm")">
+                            }
+    else
+                            {
+                                <input asp-for="SubscriptionExpiresAt" type="datetime-local" class="form-control">
+                                }
+                                <small class="text-muted">
+                                    Текущая дата: @(Model.SubscriptionExpiresAt?.ToString("dd.MM.yyyy HH:mm") ?? "Не установлена")
+                                </small>
+                            </div>
+                    <div class="mb-3">
                         <label asp-for="Status" class="form-label">Статус</label>
                         <select asp-for="Status" class="form-select">
                             <option value="Active">Active</option>

@@ -25,6 +25,14 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label asp-for="SubscriptionExpiresAt" class="form-label">
+                            📅 Дата истечения подписки
+                        </label>
+                        <input asp-for="SubscriptionExpiresAt" type="datetime-local" class="form-control"
+                               value="@DateTime.UtcNow.AddYears(1).ToString("yyyy-MM-ddTHH:mm")">
+                            <small class="text-muted">По умолчанию: +1 год от текущей даты</small>
+                        </div>
+                    <div class="mb-3">
                         <label asp-for="Status" class="form-label">Статус</label>
                         <select asp-for="Status" class="form-select">
                             <option value="Active">Active</option>

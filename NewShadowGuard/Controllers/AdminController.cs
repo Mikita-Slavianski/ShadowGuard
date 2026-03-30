@@ -32,6 +32,13 @@ namespace NewShadowGuard.Controllers
                 AssetCount = await _context.Assets.CountAsync(),
                 IncidentCount = await _context.Incidents.CountAsync(),
                 ActiveIncidents = await _context.Incidents.CountAsync(i => i.Status == "New" || i.Status == "InProgress"),
+
+                // ← ДОБАВЬТЕ ЭТИ СТРОКИ
+                NewIncidents = await _context.Incidents.CountAsync(i => i.Status == "New"),
+                InProgressIncidents = await _context.Incidents.CountAsync(i => i.Status == "InProgress"),
+                ResolvedIncidents = await _context.Incidents.CountAsync(i => i.Status == "Resolved"),
+                CriticalIncidents = await _context.Incidents.CountAsync(i => i.Severity == "Critical"),
+
                 RecentTenants = await _context.Tenants.OrderByDescending(t => t.CreatedAt).Take(5).ToListAsync(),
                 RecentUsers = await _context.Users.Include(u => u.Tenant).OrderByDescending(u => u.CreatedAt).Take(5).ToListAsync()
             };
@@ -80,10 +87,13 @@ namespace NewShadowGuard.Controllers
             if (ModelState.IsValid)
             {
                 var existing = await _context.Tenants.FindAsync(tenant.TenantId);
+                if (existing == null) return NotFound();
+
                 existing.Name = tenant.Name;
                 existing.Country = tenant.Country;
                 existing.Subscription = tenant.Subscription;
                 existing.Status = tenant.Status;
+                existing.SubscriptionExpiresAt = tenant.SubscriptionExpiresAt;  // ← Убедитесь, что эта строка есть!
 
                 await _context.SaveChangesAsync();
                 await LogAuditAction("Update", "Tenant", tenant.TenantId, $"Обновлён тенант: {tenant.Name}");
@@ -103,6 +113,31 @@ namespace NewShadowGuard.Controllers
                 await _context.SaveChangesAsync();
                 await LogAuditAction("Delete", "Tenant", id, $"Удалён тенант: {tenant.Name}");
                 TempData["Success"] = "Тенант успешно удалён";
+            }
+            return RedirectToAction(nameof(Tenants));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExtendSubscription(int tenantId, int months = 12)
+        {
+            var tenant = await _context.Tenants.FindAsync(tenantId);
+            if (tenant != null)
+            {
+                // Если подписка уже истекла, отсчитываем от сегодня
+                // Если ещё активна, отсчитываем от даты истечения
+                var fromDate = tenant.SubscriptionExpiresAt.HasValue &&
+                               tenant.SubscriptionExpiresAt.Value > DateTime.UtcNow
+                               ? tenant.SubscriptionExpiresAt.Value
+                               : DateTime.UtcNow;
+
+                tenant.SubscriptionExpiresAt = fromDate.AddMonths(months);
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("ExtendSubscription", "Tenant", tenantId,
+                    $"Подписка продлена на {months} мес. до {tenant.SubscriptionExpiresAt:dd.MM.yyyy}");
+
+                TempData["Success"] = $"Подписка продлена до {tenant.SubscriptionExpiresAt:dd.MM.yyyy}";
             }
             return RedirectToAction(nameof(Tenants));
         }
@@ -446,6 +481,13 @@ namespace NewShadowGuard.Controllers
         public int AssetCount { get; set; }
         public int IncidentCount { get; set; }
         public int ActiveIncidents { get; set; }
+
+        // ← ДОБАВЬТЕ ЭТИ СВОЙСТВА
+        public int NewIncidents { get; set; }
+        public int InProgressIncidents { get; set; }
+        public int ResolvedIncidents { get; set; }
+        public int CriticalIncidents { get; set; }
+
         public List<Tenant> RecentTenants { get; set; }
         public List<User> RecentUsers { get; set; }
     }
