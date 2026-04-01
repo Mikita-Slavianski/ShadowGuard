@@ -15,6 +15,8 @@ namespace NewShadowGuard.Data
         public DbSet<Incident> Incidents { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<BlockedIP> BlockedIPs { get; set; }
+        public DbSet<IncidentTag> IncidentTags { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +30,8 @@ namespace NewShadowGuard.Data
             modelBuilder.Entity<Incident>().ToTable("Incident");
             modelBuilder.Entity<AuditLog>().ToTable("AuditLog");
             modelBuilder.Entity<Comment>().ToTable("Comment");
+            modelBuilder.Entity<BlockedIP>().ToTable("BlockedIP");
+            modelBuilder.Entity<IncidentTag>().ToTable("IncidentTag");
         }
     }
 }

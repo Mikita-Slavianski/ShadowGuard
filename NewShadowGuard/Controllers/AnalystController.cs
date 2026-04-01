@@ -73,6 +73,7 @@ namespace CyberSecurityApp.Controllers
             return View(incidents);
         }
 
+        // Обновлённый метод IncidentDetails (добавьте загрузку тегов)
         public async Task<IActionResult> IncidentDetails(int id)
         {
             var incident = await _context.Incidents
@@ -80,6 +81,7 @@ namespace CyberSecurityApp.Controllers
                 .Include(i => i.Tenant)
                 .Include(i => i.Comments)
                     .ThenInclude(c => c.User)
+                .Include(i => i.Tags)  // ← Добавьте это свойство навигации
                 .FirstOrDefaultAsync(i => i.IncidentId == id);
 
             if (incident == null) return NotFound();
@@ -93,6 +95,14 @@ namespace CyberSecurityApp.Controllers
                     return RedirectToAction("AccessDenied", "Account");
                 }
             }
+
+            // Загружаем теги отдельно
+            var tags = await _context.IncidentTags
+                .Include(t => t.CreatedByUser)
+                .Where(t => t.IncidentId == id)
+                .ToListAsync();
+
+            ViewBag.Tags = tags;
 
             return View(incident);
         }
@@ -443,6 +453,222 @@ namespace CyberSecurityApp.Controllers
         }
 
         #endregion
+
+        #region Расширенные действия с инцидентами
+
+        // Блокировка IP
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BlockIP(int incidentId, string ipAddress, string reason, int durationDays = 30)
+        {
+            if (!string.IsNullOrEmpty(ipAddress))
+            {
+                var userId = GetCurrentUserUserId();
+
+                var blockedIP = new BlockedIP
+                {
+                    IpAddress = ipAddress,
+                    Reason = reason,
+                    BlockedBy = userId,
+                    BlockedAt = DateTime.UtcNow,
+                    ExpiresAt = durationDays > 0 ? DateTime.UtcNow.AddDays(durationDays) : null,
+                    IsActive = true,
+                    IncidentId = incidentId
+                };
+
+                _context.BlockedIPs.Add(blockedIP);
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("BlockIP", "BlockedIP", blockedIP.BlockedIpId,
+                    $"Заблокирован IP: {ipAddress} (Инцидент: {incidentId})");
+
+                TempData["Success"] = $"IP-адрес {ipAddress} заблокирован на {durationDays} дн.";
+            }
+            return RedirectToAction(nameof(IncidentDetails), new { id = incidentId });
+        }
+
+        // Разблокировка IP
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnblockIP(int blockedIpId, int incidentId)
+        {
+            var blockedIP = await _context.BlockedIPs.FindAsync(blockedIpId);
+            if (blockedIP != null)
+            {
+                blockedIP.IsActive = false;
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("UnblockIP", "BlockedIP", blockedIpId,
+                    $"Разблокирован IP: {blockedIP.IpAddress}");
+
+                TempData["Success"] = $"IP-адрес {blockedIP.IpAddress} разблокирован";
+            }
+            return RedirectToAction(nameof(IncidentDetails), new { id = incidentId });
+        }
+
+        // Эскалация инцидента
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EscalateIncident(int incidentId, string newSeverity)
+        {
+            var incident = await _context.Incidents.FindAsync(incidentId);
+            if (incident != null)
+            {
+                var oldSeverity = incident.Severity;
+                incident.Severity = newSeverity;
+                incident.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("Escalate", "Incident", incidentId,
+                    $"Критичность изменена: {oldSeverity} → {newSeverity}");
+
+                TempData["Success"] = $"Критичность инцидента изменена на {newSeverity}";
+            }
+            return RedirectToAction(nameof(IncidentDetails), new { id = incidentId });
+        }
+
+        // Обновлённый метод AddTag
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddTag(int incidentId, string tag)
+        {
+            if (!string.IsNullOrEmpty(tag))
+            {
+                var userId = GetCurrentUserUserId();
+
+                // Проверяем, нет ли уже такого тега
+                var existingTag = await _context.IncidentTags
+                    .FirstOrDefaultAsync(t => t.IncidentId == incidentId && t.TagName == tag);
+
+                if (existingTag == null)
+                {
+                    var incidentTag = new IncidentTag
+                    {
+                        IncidentId = incidentId,
+                        TagName = tag.Trim(),
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = userId
+                    };
+
+                    _context.IncidentTags.Add(incidentTag);
+                    await _context.SaveChangesAsync();
+
+                    await LogAuditAction("AddTag", "IncidentTag", incidentTag.IncidentTagId,
+                        $"Добавлен тег '{tag}' к инциденту {incidentId}");
+
+                    TempData["Success"] = $"Тег '{tag}' добавлен";
+                }
+                else
+                {
+                    TempData["Info"] = $"Тег '{tag}' уже существует";
+                }
+            }
+            return RedirectToAction(nameof(IncidentDetails), new { id = incidentId });
+        }
+
+        // Удаление тега
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemoveTag(int incidentTagId, int incidentId)
+        {
+            var tag = await _context.IncidentTags.FindAsync(incidentTagId);
+            if (tag != null)
+            {
+                _context.IncidentTags.Remove(tag);
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("RemoveTag", "IncidentTag", incidentTagId,
+                    $"Удалён тег '{tag.TagName}' из инцидента {incidentId}");
+
+                TempData["Success"] = $"Тег '{tag.TagName}' удалён";
+            }
+            return RedirectToAction(nameof(IncidentDetails), new { id = incidentId });
+        }
+
+        // Экспорт инцидента
+        public async Task<IActionResult> ExportIncident(int id, string format = "csv")
+        {
+            var incident = await _context.Incidents
+                .Include(i => i.Log)
+                .Include(i => i.Tenant)
+                .Include(i => i.Comments)
+                    .ThenInclude(c => c.User)
+                .FirstOrDefaultAsync(i => i.IncidentId == id);
+
+            if (incident == null) return NotFound();
+
+            var exportData = new List<IncidentExportDto>
+    {
+        new IncidentExportDto
+        {
+            Field = "ID",
+            Value = incident.IncidentId.ToString()
+        },
+        new IncidentExportDto
+        {
+            Field = "Название",
+            Value = incident.Title
+        },
+        new IncidentExportDto
+        {
+            Field = "Описание",
+            Value = incident.Description
+        },
+        new IncidentExportDto
+        {
+            Field = "Критичность",
+            Value = incident.Severity
+        },
+        new IncidentExportDto
+        {
+            Field = "Статус",
+            Value = incident.Status
+        },
+        new IncidentExportDto
+        {
+            Field = "Тенант",
+            Value = incident.Tenant?.Name ?? "N/A"
+        },
+        new IncidentExportDto
+        {
+            Field = "Создан",
+            Value = incident.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+        },
+        new IncidentExportDto
+        {
+            Field = "Обновлён",
+            Value = incident.UpdatedAt.ToString("dd.MM.yyyy HH:mm")
+        }
+    };
+
+            var exportService = new ExportService();
+
+            if (format.ToLower() == "excel")
+            {
+                var fileBytes = exportService.ExportToExcel(exportData, "Incident");
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"Incident_{incident.IncidentId}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+            }
+            else
+            {
+                var fileBytes = exportService.ExportToCsv(exportData);
+                return File(fileBytes, "text/csv", $"Incident_{incident.IncidentId}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+        }
+
+        // Список заблокированных IP
+        public async Task<IActionResult> BlockedIPs()
+        {
+            var blockedIPs = await _context.BlockedIPs
+                .Include(b => b.BlockedByUser)
+                .Include(b => b.Incident)
+                .OrderByDescending(b => b.BlockedAt)
+                .ToListAsync();
+
+            return View(blockedIPs);
+        }
+
+        #endregion
     }
 
     public class AnalystDashboardViewModel
@@ -462,5 +688,11 @@ namespace CyberSecurityApp.Controllers
         public string AssetType { get; set; }
         public string EventType { get; set; }
         public string RawData { get; set; }
+    }
+
+    public class IncidentExportDto
+    {
+        public string Field { get; set; }
+        public string Value { get; set; }
     }
 }

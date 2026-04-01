@@ -37,5 +37,6 @@ namespace NewShadowGuard.Models
         public Log Log { get; set; }
 
         public ICollection<Comment> Comments { get; set; }
+        public ICollection<IncidentTag> Tags { get; set; }
     }
 }

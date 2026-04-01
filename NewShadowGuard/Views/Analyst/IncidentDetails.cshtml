@@ -15,29 +15,66 @@
     </div>
 }
 
+<!-- Панель быстрых действий -->
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">⚡ Быстрые действия</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#blockIPModal">
+                    🚫 Блокировать IP
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-warning w-100" data-bs-toggle="modal" data-bs-target="#escalateModal">
+                    ⚡ Эскалация
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                    🏷️ Добавить тег
+                </button>
+            </div>
+            <div class="col-md-3">
+                <div class="btn-group w-100">
+                    <a asp-action="ExportIncident" asp-route-id="@Model.IncidentId" asp-route-format="excel" class="btn btn-success">
+                        📄 Excel
+                    </a>
+                    <a asp-action="ExportIncident" asp-route-id="@Model.IncidentId" asp-route-format="csv" class="btn btn-secondary">
+                        📄 CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Основная информация -->
     <div class="col-md-8">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">🚨 @Model.Title</h5>
-                <span class="badge 
-                    @(Model.Severity == "Critical" ? "bg-danger" : 
-                      Model.Severity == "High" ? "bg-warning" : 
-                      Model.Severity == "Medium" ? "bg-info" : "bg-secondary")">
+                <span class="badge
+                    @(Model.Severity == "Critical" ? "bg-danger" :
+                                            Model.Severity == "High" ? "bg-warning" :
+                                            Model.Severity == "Medium" ? "bg-info" : "bg-secondary")">
                     @Model.Severity
                 </span>
             </div>
             <div class="card-body">
                 <p><strong>Тенант:</strong> @Model.Tenant?.Name</p>
                 <p><strong>Описание:</strong> @Model.Description</p>
-                <p><strong>Статус:</strong> 
-                    <span class="badge 
-                        @(Model.Status == "New" ? "bg-warning" : 
-                          Model.Status == "InProgress" ? "bg-info" : 
-                          Model.Status == "Resolved" ? "bg-success" : "bg-secondary")">
-                        @(Model.Status == "InProgress" ? "В работе" : 
-                          Model.Status == "New" ? "Новый" : 
+                <p>
+                    <strong>Статус:</strong>
+                    <span class="badge
+                        @(Model.Status == "New" ? "bg-warning" :
+                                                    Model.Status == "InProgress" ? "bg-info" :
+                                                    Model.Status == "Resolved" ? "bg-success" : "bg-secondary")">
+                        @(Model.Status == "InProgress" ? "В работе" :
+                          Model.Status == "New" ? "Новый" :
                           Model.Status == "Resolved" ? "Решён" : Model.Status)
                     </span>
                 </p>
@@ -50,10 +87,10 @@
                     <label class="form-label">Изменить статус:</label>
                     <div class="input-group">
                         <select name="status" class="form-select">
-                            <option value="New" selected=@(Model.Status == "New" ? "selected" : "")>Новый</option>
-                            <option value="InProgress" selected=@(Model.Status == "InProgress" ? "selected" : "")>В работе</option>
-                            <option value="Resolved" selected=@(Model.Status == "Resolved" ? "selected" : "")>Решён</option>
-                            <option value="FalsePositive" selected=@(Model.Status == "FalsePositive" ? "selected" : "")>Ложное срабатывание</option>
+                            <option value="New" selected="@(Model.Status == "New" ? "selected" : null)">Новый</option>
+                            <option value="InProgress" selected="@(Model.Status == "InProgress" ? "selected" : null)">В работе</option>
+                            <option value="Resolved" selected="@(Model.Status == "Resolved" ? "selected" : null)">Решён</option>
+                            <option value="FalsePositive" selected="@(Model.Status == "FalsePositive" ? "selected" : null)">Ложное срабатывание</option>
                         </select>
                         <button type="submit" class="btn btn-primary">Обновить</button>
                     </div>
@@ -73,6 +110,17 @@
                     <p><strong>Время:</strong> @Model.Log.Timestamp.ToString("dd.MM.yyyy HH:mm")</p>
                     <p><strong>Данные:</strong></p>
                     <pre class="bg-light p-3">@Model.Log.RawData</pre>
+                    
+                    @if (Model.Log.EventType == "LoginFailed" || Model.Log.EventType == "PortScan" || Model.Log.RawData.Contains("IP"))
+                    {
+                        <div class="alert alert-info">
+                            <strong>🔍 Обнаружен IP-адрес в логах</strong>
+                            <p class="mb-2 small">Если этот IP представляет угрозу, вы можете заблокировать его</p>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#blockIPModal">
+                                🚫 Заблокировать этот IP
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -108,6 +156,150 @@
                     <button type="submit" class="btn btn-primary btn-sm w-100">Отправить</button>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <!-- Теги инцидента -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">🏷️ Теги</h5>
+            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                ➕ Добавить
+            </button>
+        </div>
+        <div class="card-body">
+            @{
+                var tags = ViewBag.Tags as List<NewShadowGuard.Models.IncidentTag>;
+            }
+            @if (tags != null && tags.Any())
+            {
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var tag in tags)
+                    {
+                        <span class="badge bg-info fs-6 d-inline-flex align-items-center">
+                            @tag.TagName
+                            <form asp-action="RemoveTag" method="post" style="display:inline" class="ms-1">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="incidentTagId" value="@tag.IncidentTagId" />
+                                <input type="hidden" name="incidentId" value="@Model.IncidentId" />
+                                <button type="submit" class="btn btn-sm btn-link text-white p-0" style="border:none; background:none;">
+                                    ✕
+                                </button>
+                            </form>
+                        </span>
+                    }
+                </div>
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-info-circle"></i> Добавлено: @tags.Count тег(ов)
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">Теги не добавлены</p>
+                <small class="text-muted">Нажмите "Добавить" чтобы добавить тег</small>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Блокировка IP -->
+<div class="modal fade" id="blockIPModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="BlockIP" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="incidentId" value="@Model.IncidentId" />
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">🚫 Блокировать IP-адрес</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">IP-адрес *</label>
+                        <input type="text" name="ipAddress" class="form-control" placeholder="192.168.1.100" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Причина блокировки</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="Brute force attack, Port scan, etc."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Срок блокировки (дней)</label>
+                        <select name="durationDays" class="form-select">
+                            <option value="7">7 дней</option>
+                            <option value="14">14 дней</option>
+                            <option value="30" selected>30 дней</option>
+                            <option value="90">90 дней</option>
+                            <option value="0">Бессрочно</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">🚫 Заблокировать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Эскалация -->
+<div class="modal fade" id="escalateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="EscalateIncident" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="incidentId" value="@Model.IncidentId" />
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">⚡ Эскалация инцидента</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Текущая критичность: <strong>@Model.Severity</strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">Новая критичность *</label>
+                        <select name="newSeverity" class="form-select">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-warning">⚡ Эскалировать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно: Добавить тег -->
+<div class="modal fade" id="addTagModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form asp-action="AddTag" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="incidentId" value="@Model.IncidentId" />
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">🏷️ Добавить тег</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Название тега *</label>
+                        <input type="text" name="tag" class="form-control"
+                               placeholder="APT, Malware, Phishing" required>
+                        <small class="text-muted">
+                            Примеры: APT, Malware, Phishing, DDoS, Insider, Ransomware
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-info">🏷️ Добавить</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
