@@ -1,0 +1,127 @@
+﻿@{
+    ViewData["Title"] = "Нет тенанта";
+}
+
+<div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark text-center py-4">
+                    <h2 class="mb-0">⚠️ У вас нет тенанта</h2>
+                </div>
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h5 class="alert-heading">📋 Что это значит?</h5>
+                        <p class="mb-0">
+                            Тенант — это ваша компания в системе. Без тенанта вы не можете
+                            просматривать инциденты, активы и другие данные безопасности.
+                        </p>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">🏢 Вариант 1: Создать тенант</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Создайте новый тенант для вашей компании.
+                                        Вам будет предоставлен пробный период <strong>1 месяц</strong>
+                                        с тарифным планом <strong>Basic</strong>.
+                                    </p>
+                                    <ul class="small text-muted">
+                                        <li>✅ До 10 активов</li>
+                                        <li>✅ До 5 пользователей</li>
+                                        <li>✅ Базовая поддержка</li>
+                                    </ul>
+                                    
+                                    <hr>
+                                    
+                                    <form asp-action="CreateTenantFromNoTenant" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <div class="mb-3">
+                                            <label class="form-label">Название компании *</label>
+                                            <input type="text" name="companyName" class="form-control"
+                                                   placeholder="ООО Пример" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Страна</label>
+                                            <input type="text" name="country" class="form-control"
+                                                   value="Россия">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            🚀 Создать тенант
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="mb-0">📧 Вариант 2: Обратиться к администратору</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text">
+                                        Если вы уже являетесь сотрудником компании,
+                                        но у вас нет доступа — обратитесь к администратору системы.
+                                    </p>
+                                    <ul class="small text-muted">
+                                        <li>✅ Администратор добавит вас в существующий тенант</li>
+                                        <li>✅ Вы получите доступ ко всем функциям</li>
+                                        <li>✅ Не нужно создавать новый тенант</li>
+                                    </ul>
+                                    
+                                    <hr>
+                                    
+                                    <div class="alert alert-secondary mb-3">
+                                        <strong>📞 Контакты администратора:</strong>
+                                        <p class="mb-0 small">
+                                            📧 admin@system.local<br>
+                                            📞 +7 (999) 000-00-00
+                                        </p>
+                                    </div>
+                                    
+                                    <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-secondary w-100">
+                                        🚪 Выйти и связаться с администратором
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">❓ Часто задаваемые вопросы:</h6>
+                        <dl class="mb-0 small">
+                            <dt>Почему у меня нет тенанта?</dt>
+                            <dd class="mb-2">При регистрации вы не указали компанию, либо администратор ещё не добавил вас в тенант.</dd>
+                            
+                            <dt>Могу ли я изменить тенант позже?</dt>
+                            <dd class="mb-2">Да, администратор может изменить ваш тенант в любой момент.</dd>
+                            
+                            <dt>Что такое пробный период?</dt>
+                            <dd class="mb-0">Это 1 месяц бесплатного использования с базовым функционалом. После истечения обратитесь к администратору для продления.</dd>
+                        </dl>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-primary">
+                            🔑 Сменить пароль
+                        </a>
+                        <a asp-controller="Home" asp-action="About" class="btn btn-outline-secondary">
+                            ℹ️ О проекте
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
