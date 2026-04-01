@@ -182,5 +182,90 @@ namespace NewShadowGuard.Controllers
         {
             return View();
         }
+
+        // Страница регистрации
+        public IActionResult Register()
+        {
+            // Если уже авторизован - перенаправляем на дашборд
+            if (HttpContext.Session.GetString("UserId") != null)
+            {
+                var role = HttpContext.Session.GetString("Role");
+                return RedirectToAction("Index", GetDashboardByRole(role));
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            // Проверка на уникальность Email
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+            if (existingUser != null)
+            {
+                ModelState.AddModelError("Email", "Пользователь с таким Email уже существует");
+                return View(model);
+            }
+
+            try
+            {
+                // Создаём нового пользователя
+                var user = new User
+                {
+                    Email = model.Email,
+                    FullName = model.FullName,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
+                    Role = "Client",  // ← Автоматически назначаем роль "Клиент"
+                    TenantId = null,  // ← Без тенанта
+                    MfaEnabled = false,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                // Если указана компания, создаём новый тенант
+                if (!string.IsNullOrEmpty(model.CompanyName))
+                {
+                    var tenant = new Tenant
+                    {
+                        Name = model.CompanyName,
+                        Country = model.Country ?? "Россия",
+                        Subscription = "Basic",
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow,
+                        SubscriptionExpiresAt = DateTime.UtcNow.AddMonths(1) // Пробный период 1 месяц
+                    };
+
+                    _context.Tenants.Add(tenant);
+                    await _context.SaveChangesAsync();
+
+                    // Привязываем пользователя к новому тенанту
+                    user.TenantId = tenant.TenantId;
+                    await _context.SaveChangesAsync();
+
+                    // Логируем создание тенанта
+                    await LogAuditAction(user.UserId, "Create", "Tenant", tenant.TenantId);
+                }
+
+                // Логируем регистрацию
+                await LogAuditAction(user.UserId, "Register", "User", user.UserId);
+
+                TempData["Success"] = "✅ Регистрация успешна! Теперь вы можете войти.";
+                return RedirectToAction("Login");
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Ошибка при регистрации: {ex.Message}");
+                return View(model);
+            }
+        }
     }
 }

@@ -17,13 +17,13 @@
                         
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email"
+                            <input type="email" class="form-control" id="email" name="email" 
                                    placeholder="admin@system.local" required autofocus>
                         </div>
                         
                         <div class="mb-3">
                             <label for="password" class="form-label">Пароль</label>
-                            <input type="password" class="form-control" id="password" name="password"
+                            <input type="password" class="form-control" id="password" name="password" 
                                    placeholder="password123" required>
                         </div>
                         
@@ -34,7 +34,14 @@
                     
                     <hr class="my-4">
                     
-                    <div class="text-muted small">
+                    <div class="text-center">
+                        <p class="mb-2">
+                            Нет аккаунта? 
+                            <a asp-action="Register" class="text-decoration-none">📝 Зарегистрироваться</a>
+                        </p>
+                    </div>
+                    
+                    <div class="text-muted small mt-3">
                         <strong>Тестовые учётные записи:</strong>
                         <ul class="mb-0 mt-2">
                             <li><code>admin@system.local</code> — Администратор</li>
