@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NewShadowGuard.Attributes;
 using NewShadowGuard.Data;
 using NewShadowGuard.Models;
+using NewShadowGuard.Models.ViewModels;
 using NewShadowGuard.Services;
 
 namespace NewShadowGuard.Controllers
@@ -142,6 +143,163 @@ namespace NewShadowGuard.Controllers
                     $"Комментарий к инциденту {incidentId}");
             }
             return RedirectToAction(nameof(IncidentDetails), new { id = incidentId });
+        }
+
+        // Страница создания инцидента
+        // Страница создания инцидента
+        public async Task<IActionResult> CreateIncident()
+        {
+            var tenantId = GetCurrentUserTenantId();
+            var isAdmin = IsAdmin();
+
+            // Загружаем тенанты для выбора
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
+
+            // Загружаем логи для выбора (последние 100)
+            var logsQuery = _context.Logs
+                .Include(l => l.Asset)
+                .AsQueryable();  // ← Начинаем с IQueryable
+
+            if (!isAdmin && tenantId.HasValue)
+            {
+                logsQuery = logsQuery.Where(l => l.Asset.TenantId == tenantId);
+            }
+
+            ViewBag.Logs = await logsQuery
+                .OrderByDescending(l => l.Timestamp)  // ← OrderBy ПОСЛЕ Where
+                .Take(100)
+                .ToListAsync();
+
+            // Загружаем активы для выбора
+            var assetsQuery = _context.Assets
+                .Include(a => a.Tenant)
+                .AsQueryable();  // ← Начинаем с IQueryable
+
+            if (!isAdmin && tenantId.HasValue)
+            {
+                assetsQuery = assetsQuery.Where(a => a.TenantId == tenantId);  // ← Сначала Where
+            }
+
+            ViewBag.Assets = await assetsQuery
+                .OrderBy(a => a.Name)  // ← Потом OrderBy
+                .ToListAsync();
+
+            // Предвыбираем тенант аналитика
+            if (!isAdmin && tenantId.HasValue)
+            {
+                ViewBag.SelectedTenantId = tenantId.Value;
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateIncident(CreateIncidentViewModel model)
+        {
+            var tenantId = GetCurrentUserTenantId();
+            var isAdmin = IsAdmin();
+
+            // Загружаем справочники для валидации
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
+
+            ViewBag.Logs = await _context.Logs
+                .Include(l => l.Asset)
+                .OrderByDescending(l => l.Timestamp)
+                .Take(100)
+                .ToListAsync();
+
+            ViewBag.Assets = await _context.Assets
+                .Include(a => a.Tenant)
+                .OrderBy(a => a.Name)
+                .ToListAsync();
+
+            // Проверка: выбран ли тенант
+            if (!model.TenantId.HasValue)
+            {
+                ModelState.AddModelError("TenantId", "Выберите тенант");
+                return View(model);
+            }
+
+            // Проверка: существует ли тенант
+            var tenant = await _context.Tenants.FindAsync(model.TenantId.Value);
+            if (tenant == null)
+            {
+                ModelState.AddModelError("TenantId", "Неверный тенант");
+                return View(model);
+            }
+
+            // Проверка доступа (аналитик может создавать только для своего тенанта)
+            if (!isAdmin && tenantId.HasValue && model.TenantId.Value != tenantId.Value)
+            {
+                ModelState.AddModelError("TenantId", "Вы можете создавать инциденты только для своего тенанта");
+                return View(model);
+            }
+
+            // Проверка: существует ли лог (если указан)
+            if (model.LogId.HasValue)
+            {
+                var log = await _context.Logs.FindAsync(model.LogId.Value);
+                if (log == null)
+                {
+                    ModelState.AddModelError("LogId", "Неверный лог");
+                    return View(model);
+                }
+            }
+
+            // Проверка обязательных полей
+            if (string.IsNullOrEmpty(model.Title))
+            {
+                ModelState.AddModelError("Title", "Название обязательно");
+            }
+            if (string.IsNullOrEmpty(model.Description))
+            {
+                ModelState.AddModelError("Description", "Описание обязательно");
+            }
+            if (string.IsNullOrEmpty(model.Severity))
+            {
+                ModelState.AddModelError("Severity", "Критичность обязательна");
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var incident = new Incident
+                    {
+                        Title = model.Title,
+                        Description = model.Description,
+                        Severity = model.Severity,
+                        Status = "New",
+                        TenantId = model.TenantId.Value,
+                        LogId = model.LogId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Incidents.Add(incident);
+                    await _context.SaveChangesAsync();
+
+                    await LogAuditAction("Create", "Incident", incident.IncidentId,
+                        $"Создан инцидент: {incident.Title} (Тенант: {tenant.Name})");
+
+                    TempData["Success"] = $"Инцидент успешно создан!";
+                    return RedirectToAction(nameof(IncidentDetails), new { id = incident.IncidentId });
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Ошибка при создании: {ex.Message}");
+                    return View(model);
+                }
+            }
+
+            return View(model);
         }
 
         #endregion

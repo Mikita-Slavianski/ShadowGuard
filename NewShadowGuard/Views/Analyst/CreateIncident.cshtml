@@ -1,0 +1,175 @@
+﻿@model NewShadowGuard.Models.ViewModels.CreateIncidentViewModel
+@{
+    ViewData["Title"] = "Создать инцидент";
+}
+
+<h2 class="mb-4">🚨 Создать инцидент</h2>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <h5>Ошибки валидации:</h5>
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">🚨 Основная информация</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="CreateIncident" method="post">
+                    @Html.AntiForgeryToken()
+                    
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label">Название инцидента *</label>
+                        <input asp-for="Title" class="form-control" 
+                               placeholder="Например: Brute Force Attack на WEB-SRV-01" required>
+                        <span asp-validation-for="Title" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Описание *</label>
+                        <textarea asp-for="Description" class="form-control" rows="5" 
+                                  placeholder="Опишите инцидент детально: что произошло, когда обнаружено, какие системы затронуты..." required></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Severity" class="form-label">Критичность *</label>
+                            <select asp-for="Severity" class="form-select" required>
+                                <option value="">— Выберите критичность —</option>
+                                <option value="Low">🟢 Low</option>
+                                <option value="Medium">🔵 Medium</option>
+                                <option value="High">🟡 High</option>
+                                <option value="Critical">🔴 Critical</option>
+                            </select>
+                            <span asp-validation-for="Severity" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="TenantId" class="form-label">Тенант *</label>
+                            <select asp-for="TenantId" class="form-select" required>
+                                <option value="">— Выберите тенант —</option>
+                                @foreach (var tenant in ViewBag.Tenants)
+                                {
+                                    var selected = tenant.TenantId == ViewBag.SelectedTenantId ? "selected" : "";
+                                    <option value="@tenant.TenantId" @@selected>
+                                        @tenant.Name (@tenant.Subscription)
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="TenantId" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">📋 Связанные данные (опционально)</h5>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="LogId" class="form-label">Связанный лог</label>
+                            <select asp-for="LogId" class="form-select">
+                                <option value="">— Выберите лог (если есть) —</option>
+                                @foreach (var log in ViewBag.Logs)
+                                {
+                                    <option value="@log.LogId">
+                                        [@log.Timestamp.ToString("dd.MM HH:mm")] @log.EventType - @log.Asset?.Name
+                                    </option>
+                                }
+                            </select>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i> Последние 100 логов
+                            </small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="AssetId" class="form-label">Связанный актив</label>
+                            <select asp-for="AssetId" class="form-select">
+                                <option value="">— Выберите актив (если есть) —</option>
+                                @foreach (var asset in ViewBag.Assets)
+                                {
+                                    <option value="@asset.AssetId">
+                                        @asset.Name (@asset.Type) - @asset.Tenant?.Name
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-lightbulb"></i> 
+                        <strong>Совет:</strong> Если инцидент связан с конкретным логом или активом, 
+                        укажите это для более удобного анализа.
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-plus-circle"></i> Создать инцидент
+                        </button>
+                        <a asp-action="Incidents" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">💡 Рекомендации</h5>
+            </div>
+            <div class="card-body">
+                <h6>Название инцидента:</h6>
+                <ul class="small text-muted">
+                    <li>Будьте конкретны</li>
+                    <li>Укажите тип атаки</li>
+                    <li>Укажите затронутую систему</li>
+                </ul>
+                <hr>
+                <h6>Описание:</h6>
+                <ul class="small text-muted">
+                    <li>Что произошло?</li>
+                    <li>Когда обнаружено?</li>
+                    <li>Какие системы затронуты?</li>
+                    <li>Есть ли IoC (Indicators of Compromise)?</li>
+                </ul>
+                <hr>
+                <h6>Критичность:</h6>
+                <ul class="small text-muted mb-0">
+                    <li>🟢 <strong>Low</strong> — Минимальное влияние</li>
+                    <li>🔵 <strong>Medium</strong> — Среднее влияние</li>
+                    <li>🟡 <strong>High</strong> — Серьёзное влияние</li>
+                    <li>🔴 <strong>Critical</strong> — Критическое влияние</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">⚠️ Важно</h5>
+            </div>
+            <div class="card-body">
+                <p class="small mb-0">
+                    После создания инцидент получит статус <strong>"Новый"</strong>. 
+                    Не забудьте назначить ответственного и начать расследование.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
