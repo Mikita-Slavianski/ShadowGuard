@@ -45,6 +45,20 @@
             border-radius: 8px;
             border: none;
         }
+        .bg-purple {
+    background-color: #6f42c1 !important;
+}
+.border-purple {
+    border-color: #6f42c1 !important;
+}
+.plan-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
         /* Анимация для важных элементов */
         @@keyframes pulse {
             0% { transform: scale(1); }
@@ -100,6 +114,9 @@ footer a:hover {
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="Client" asp-action="Index">📈 Дашборд</a>
                             </li>
+                            <li class="nav-item">
+            <a class="nav-link" asp-controller="Client" asp-action="Subscription">💳 Подписка</a>
+        </li>
                         }
                             <li class="nav-item">
         <a class="nav-link" asp-controller="Home" asp-action="About">ℹ️ О проекте</a>

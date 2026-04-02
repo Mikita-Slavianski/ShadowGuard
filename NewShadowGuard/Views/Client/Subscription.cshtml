@@ -1,0 +1,309 @@
+﻿@model NewShadowGuard.Controllers.SubscriptionViewModel
+@{
+    ViewData["Title"] = "Управление подпиской";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">💳 Управление подпиской</h2>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show">
+            @TempData["Warning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Текущая подписка -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📋 Текущая подписка</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <h6 class="text-muted">Компания</h6>
+                    <p class="fw-bold">@Model.TenantName</p>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">Тарифный план</h6>
+                    <p>
+                        <span class="badge
+                            @(Model.CurrentPlan == "Enterprise" ? "bg-purple" :
+                                                            Model.CurrentPlan == "Professional" ? "bg-info" : "bg-secondary")"
+                              style="@(Model.CurrentPlan == "Enterprise" ? "background-color: #6f42c1 !important;" : "")">
+                            @Model.CurrentPlan
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">Статус</h6>
+                    <p>
+                        <span class="badge
+                            @(Model.Status == "Active" ? "bg-success" : "bg-danger")">
+                            @(Model.Status == "Active" ? "Активна" : "Заблокирована")
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">Истекает</h6>
+                    <p class="@(Model.DaysUntilExpiry <= 30 ? "text-danger fw-bold" : "")">
+                        @(Model.ExpiresAt?.ToString("dd.MM.yyyy") ?? "Не установлена")
+                        <br>
+                        <small class="text-muted">(@Model.PlanStatus)</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Продление подписки -->
+        <!-- Продление подписки -->
+<div class="col-md-6">
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">📅 Продлить подписку</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Продлите вашу подписку на выбранный период</p>
+            
+            <form asp-action="ProcessPayment" method="post" id="paymentForm">
+                @Html.AntiForgeryToken()
+                
+                <!-- Скрытое поле для плана (заполняется из выбора выше) -->
+                <input type="hidden" name="plan" id="selectedPlan" value="@Model.CurrentPlan" />
+                
+                <div class="mb-3">
+                    <label class="form-label">Период продления</label>
+                    <select name="months" class="form-select">
+                        <option value="1">1 месяц</option>
+                        <option value="3">3 месяца</option>
+                        <option value="6">6 месяцев</option>
+                        <option value="12" selected>12 месяцев (выгодно!)</option>
+                    </select>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> 
+                    Выбран план: <strong id="displayPlan">@Model.CurrentPlan</strong>
+                </div>
+
+                <hr>
+                
+                <h6 class="mb-3">💳 Платёжные данные (имитация)</h6>
+                
+                <div class="mb-3">
+                    <label class="form-label">Номер карты *</label>
+                    <input type="text" name="cardNumber" class="form-control" 
+                           placeholder="0000 0000 0000 0000" maxlength="19" required>
+                    <small class="text-muted">Принимается любой номер</small>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Владелец карты *</label>
+                        <input type="text" name="cardHolder" class="form-control" 
+                               placeholder="IVAN IVANOV" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Срок действия *</label>
+                        <input type="text" name="expiryDate" class="form-control" 
+                               placeholder="MM/YY" maxlength="5" required>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">CVV *</label>
+                        <input type="text" name="cvv" class="form-control" 
+                               placeholder="123" maxlength="3" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100">
+                    🔒 Оплатить и продлить
+                </button>
+                
+                <small class="text-muted d-block mt-2 text-center">
+                    🔒 Безопасное соединение. Данные не сохраняются.
+                </small>
+            </form>
+        </div>
+    </div>
+</div>
+
+        <!-- Смена тарифного плана -->
+<div class="col-md-6">
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">🔄 Сменить тарифный план</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Выберите подходящий тарифный план</p>
+
+            <form asp-action="ProcessPayment" method="post" id="changePlanForm">
+                @Html.AntiForgeryToken()
+                
+                <div class="mb-3">
+                    <div class="card mb-2 plan-card @(Model.CurrentPlan == "Basic" ? "border-primary bg-light" : "")" 
+                         data-plan="Basic" onclick="selectPlan(this, 'Basic')">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="plan" 
+                                           id="planBasic" value="Basic" 
+                                           @(Model.CurrentPlan == "Basic" ? "checked" : "")>
+                                    <label class="form-check-label fw-bold" for="planBasic">
+                                        🥉 Basic
+                                    </label>
+                                </div>
+                                @if (Model.CurrentPlan == "Basic")
+                                {
+                                    <span class="badge bg-primary">Текущий</span>
+                                }
+                            </div>
+                            <small class="text-muted ms-4">До 10 активов, 5 пользователей</small>
+                        </div>
+                    </div>
+
+                    <div class="card mb-2 plan-card @(Model.CurrentPlan == "Professional" ? "border-info bg-light" : "")" 
+                         data-plan="Professional" onclick="selectPlan(this, 'Professional')">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="plan" 
+                                           id="planProfessional" value="Professional" 
+                                           @(Model.CurrentPlan == "Professional" ? "checked" : "")>
+                                    <label class="form-check-label fw-bold" for="planProfessional">
+                                        🥈 Professional
+                                    </label>
+                                </div>
+                                @if (Model.CurrentPlan == "Professional")
+                                {
+                                    <span class="badge bg-info">Текущий</span>
+                                }
+                            </div>
+                            <small class="text-muted ms-4">До 50 активов, 20 пользователей</small>
+                        </div>
+                    </div>
+
+                    <div class="card mb-2 plan-card @(Model.CurrentPlan == "Enterprise" ? "border-purple bg-light" : "")" 
+                         data-plan="Enterprise" onclick="selectPlan(this, 'Enterprise')"
+                         style="@(Model.CurrentPlan == "Enterprise" ? "border-color: #6f42c1 !important;" : "")">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="plan" 
+                                           id="planEnterprise" value="Enterprise" 
+                                           @(Model.CurrentPlan == "Enterprise" ? "checked" : "")>
+                                    <label class="form-check-label fw-bold" for="planEnterprise">
+                                        🥇 Enterprise
+                                    </label>
+                                </div>
+                                @if (Model.CurrentPlan == "Enterprise")
+                                {
+                                    <span class="badge" style="background-color: #6f42c1 !important;">Текущий</span>
+                                }
+                            </div>
+                            <small class="text-muted ms-4">Безлимитные активы и пользователи</small>
+                        </div>
+                    </div>
+                </div>
+
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> 
+                    Выберите план выше, затем заполните платёжные данные и нажмите "Оплатить"
+                </small>
+            </form>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <!-- Отмена подписки -->
+    <div class="card mb-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">⚠️ Опасная зона</h5>
+        </div>
+        <div class="card-body">
+            <h6>Отмена подписки</h6>
+            <p class="text-muted">
+                После отмены подписки ваш тенант будет заблокирован,
+                а доступ к системе ограничен. Это действие нельзя отменить автоматически.
+            </p>
+            <form asp-action="CancelSubscription" method="post"
+                  onsubmit="return confirm('⚠️ Вы уверены? После отмены подписки доступ к системе будет заблокирован. Для восстановления потребуется обращение к администратору.')">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger">
+                    🚫 Отменить подписку
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="text-center mb-4">
+        <a asp-action="Index" class="btn btn-secondary">← Назад к дашборду</a>
+    </div>
+</div>
+
+<style>
+    .border-purple {
+        border-color: #6f42c1 !important;
+    }
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+</style>
+
+                @section Scripts {
+    <script>
+        // Функция выбора плана
+        function selectPlan(element, planName) {
+            // Снимаем выделение со всех карточек
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.classList.remove('border-primary', 'border-info', 'border-purple', 'bg-light');
+            });
+            
+            // Выделяем выбранную карточку
+            element.classList.add('bg-light');
+            if (planName === 'Basic') {
+                element.classList.add('border-primary');
+            } else if (planName === 'Professional') {
+                element.classList.add('border-info');
+            } else if (planName === 'Enterprise') {
+                element.classList.add('border-purple');
+            }
+            
+            // Обновляем скрытое поле и отображение
+            document.getElementById('selectedPlan').value = planName;
+            document.getElementById('displayPlan').textContent = planName;
+            
+            // Отмечаем radio button
+            document.querySelector(`input[value="${planName}"]`).checked = true;
+        }
+
+        // Валидация формы перед отправкой
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+            const plan = document.getElementById('selectedPlan').value;
+            if (!plan) {
+                e.preventDefault();
+                alert('⚠️ Пожалуйста, выберите тарифный план');
+                return false;
+            }
+        });
+    </script>
+}

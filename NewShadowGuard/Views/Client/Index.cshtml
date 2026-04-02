@@ -138,6 +138,45 @@
     </div>
 </div>
 
+<!-- Карточка подписки -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">💳 Ваша подписка</h5>
+        <a asp-action="Subscription" class="btn btn-sm btn-outline-primary">Управление →</a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <h6 class="text-muted">План</h6>
+                <p class="fw-bold">
+                    <span class="badge
+                        @(Model.CurrentPlan == "Enterprise" ? "bg-purple" :
+                                                    Model.CurrentPlan == "Professional" ? "bg-info" : "bg-secondary")"
+                          style="@(Model.CurrentPlan == "Enterprise" ? "background-color: #6f42c1 !important;" : "")">
+                        @Model.CurrentPlan
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">Статус</h6>
+                <p>
+                    <span class="badge @(Model.Status == "Active" ? "bg-success" : "bg-danger")">
+                        @(Model.Status == "Active" ? "Активна" : "Заблокирована")
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted">Истекает</h6>
+                <p class="@(Model.DaysUntilExpiry <= 30 ? "text-danger fw-bold" : "")">
+                    @(Model.SubscriptionExpiresAt?.ToString("dd.MM.yyyy") ?? "Не установлена")
+                    <br>
+                    <small class="text-muted">(@Model.PlanStatus - @Model.DaysUntilExpiry дн.)</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Быстрые действия -->
 <div class="row">
     <div class="col-md-6">
