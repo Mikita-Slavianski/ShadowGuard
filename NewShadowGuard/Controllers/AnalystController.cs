@@ -199,7 +199,7 @@ namespace NewShadowGuard.Controllers
 
             ViewBag.TenantAssetLimits = tenantAssetLimits;
             ViewBag.CurrentTenantId = tenantId.HasValue ? tenantId.Value : 0;
-            // ViewBag.IsAdmin = isAdmin ?? false;
+            //ViewBag.IsAdmin = isAdmin ?? false;
             ViewBag.TotalAssets = assets.Count;  // ← Для отладки
 
             return View(assets);
@@ -207,13 +207,17 @@ namespace NewShadowGuard.Controllers
 
         public async Task<IActionResult> CreateAsset()
         {
-            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+            // ← Загружаем все активные тенанты для выбора
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
 
-            // Если не админ, сразу устанавливаем TenantId
-            if (!IsAdmin())
+            // Предвыбираем тенант аналитика (если есть)
+            var currentTenantId = GetCurrentUserTenantId();
+            if (currentTenantId.HasValue)
             {
-                var tenantId = GetCurrentUserTenantId();
-                ViewBag.DefaultTenantId = tenantId;
+                ViewBag.SelectedTenantId = currentTenantId.Value;
             }
 
             return View();
@@ -223,35 +227,40 @@ namespace NewShadowGuard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAsset(Asset asset)
         {
-            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+            // ← Загружаем тенанты для валидации
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
 
-            // Если не админ, привязываем к тенанту аналитика
-            if (!IsAdmin())
+            // ← Проверка: выбран ли тенант
+            if (!asset.TenantId.HasValue)
             {
-                asset.TenantId = GetCurrentUserTenantId();
+                ModelState.AddModelError("TenantId", "Выберите тенант");
+                return View(asset);
             }
 
-            // ← ПРОВЕРКА ЛИМИТА АКТИВОВ
-            if (asset.TenantId.HasValue)
+            // ← Проверка: существует ли тенант
+            var tenant = await _context.Tenants.FindAsync(asset.TenantId.Value);
+            if (tenant == null)
             {
-                var tenant = await _context.Tenants.FindAsync(asset.TenantId.Value);
-                if (tenant != null)
-                {
-                    var limits = SubscriptionLimits.GetLimits(tenant.Subscription);
-                    var currentAssetCount = await _context.Assets.CountAsync(a => a.TenantId == tenant.TenantId);
-
-                    if (!SubscriptionLimits.HasUnlimitedAssets(tenant.Subscription) && currentAssetCount >= limits.MaxAssets)
-                    {
-                        ModelState.AddModelError("",
-                            $"❌ Превышен лимит активов для плана {tenant.Subscription}. " +
-                            $"Максимум: {limits.MaxAssets}. Текущее: {currentAssetCount}. " +
-                            $"Для увеличения лимита смените тарифный план.");
-                        return View(asset);
-                    }
-                }
+                ModelState.AddModelError("TenantId", "Неверный тенант");
+                return View(asset);
             }
 
-            // Проверка на обязательные поля
+            // ← Проверка лимита активов
+            var limits = SubscriptionLimits.GetLimits(tenant.Subscription);
+            var currentAssetCount = await _context.Assets.CountAsync(a => a.TenantId == tenant.TenantId);
+
+            if (!SubscriptionLimits.HasUnlimitedAssets(tenant.Subscription) && currentAssetCount >= limits.MaxAssets)
+            {
+                ModelState.AddModelError("",
+                    $"❌ Превышен лимит активов для тенанта {tenant.Name} (план {tenant.Subscription}). " +
+                    $"Максимум: {limits.MaxAssets}. Текущее: {currentAssetCount}.");
+                return View(asset);
+            }
+
+            // Проверка обязательных полей
             if (string.IsNullOrEmpty(asset.Name))
             {
                 ModelState.AddModelError("Name", "Название обязательно");
@@ -273,8 +282,10 @@ namespace NewShadowGuard.Controllers
                     _context.Assets.Add(asset);
                     await _context.SaveChangesAsync();
 
-                    await LogAuditAction("Create", "Asset", asset.AssetId, $"Создан актив: {asset.Name}");
-                    TempData["Success"] = "Актив успешно создан";
+                    await LogAuditAction("Create", "Asset", asset.AssetId,
+                        $"Создан актив: {asset.Name} (Тенант: {tenant.Name})");
+
+                    TempData["Success"] = $"Актив успешно создан для {tenant.Name}";
                     return RedirectToAction(nameof(Assets));
                 }
                 catch (Exception ex)
@@ -292,17 +303,12 @@ namespace NewShadowGuard.Controllers
             var asset = await _context.Assets.FindAsync(id);
             if (asset == null) return NotFound();
 
-            // Проверка доступа: аналитик может редактировать только активы своего тенанта
-            if (!IsAdmin())
-            {
-                var tenantId = GetCurrentUserTenantId();
-                if (tenantId.HasValue && asset.TenantId != tenantId)
-                {
-                    return RedirectToAction("AccessDenied", "Account");
-                }
-            }
+            // ← Загружаем все тенанты для выбора
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
 
-            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
             return View(asset);
         }
 
@@ -310,19 +316,45 @@ namespace NewShadowGuard.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAsset(Asset asset)
         {
-            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
+            // ← Загружаем тенанты для валидации
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
 
-            // Проверка доступа
-            if (!IsAdmin())
+            // ← Проверка: выбран ли тенант
+            if (!asset.TenantId.HasValue)
             {
-                var tenantId = GetCurrentUserTenantId();
-                if (tenantId.HasValue && asset.TenantId != tenantId)
+                ModelState.AddModelError("TenantId", "Выберите тенант");
+                return View(asset);
+            }
+
+            // ← Проверка: существует ли тенант
+            var tenant = await _context.Tenants.FindAsync(asset.TenantId.Value);
+            if (tenant == null)
+            {
+                ModelState.AddModelError("TenantId", "Неверный тенант");
+                return View(asset);
+            }
+
+            // ← Проверка лимита активов (если меняем тенант)
+            var existingAsset = await _context.Assets.FindAsync(asset.AssetId);
+            if (existingAsset != null && existingAsset.TenantId != asset.TenantId.Value)
+            {
+                // Проверяем лимит в НОВОМ тенанте
+                var limits = SubscriptionLimits.GetLimits(tenant.Subscription);
+                var currentAssetCount = await _context.Assets.CountAsync(a => a.TenantId == tenant.TenantId);
+
+                if (!SubscriptionLimits.HasUnlimitedAssets(tenant.Subscription) && currentAssetCount >= limits.MaxAssets)
                 {
-                    return RedirectToAction("AccessDenied", "Account");
+                    ModelState.AddModelError("",
+                        $"❌ Превышен лимит активов для тенанта {tenant.Name}. " +
+                        $"Максимум: {limits.MaxAssets}. Текущее: {currentAssetCount}.");
+                    return View(asset);
                 }
             }
 
-            // Проверка на обязательные поля
+            // Проверка обязательных полей
             if (string.IsNullOrEmpty(asset.Name))
             {
                 ModelState.AddModelError("Name", "Название обязательно");
@@ -343,16 +375,19 @@ namespace NewShadowGuard.Controllers
                     var existing = await _context.Assets.FindAsync(asset.AssetId);
                     if (existing == null) return NotFound();
 
+                    var oldTenantId = existing.TenantId;
+
                     existing.Name = asset.Name;
                     existing.Type = asset.Type;
                     existing.IpAddress = asset.IpAddress;
                     existing.Os = asset.Os;
                     existing.Criticality = asset.Criticality;
+                    existing.TenantId = asset.TenantId;  // ← Обновляем тенант
 
                     await _context.SaveChangesAsync();
 
                     await LogAuditAction("Update", "Asset", asset.AssetId,
-                        $"Обновлён актив: {asset.Name}");
+                        $"Обновлён актив: {asset.Name} (Тенант: {tenant.Name})");
 
                     TempData["Success"] = "Актив успешно обновлён";
                     return RedirectToAction(nameof(Assets));

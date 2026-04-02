@@ -26,72 +26,75 @@
             <div class="mb-3">
                 <label asp-for="Name" class="form-label">Название *</label>
                 <input asp-for="Name" class="form-control" required>
-                    <span asp-validation-for="Name" class="text-danger"></span>
-                </div>
-                <div class="mb-3">
-                    <label asp-for="Type" class="form-label">Тип *</label>
-                    <select asp-for="Type" class="form-select" required>
-                        <option value="">— Выберите тип —</option>
-                        <option value="Server">Server</option>
-                        <option value="Workstation">Workstation</option>
-                        <option value="Network">Network</option>
-                        <option value="Database">Database</option>
-                    </select>
-                    <span asp-validation-for="Type" class="text-danger"></span>
-                </div>
-                <div class="mb-3">
-                    <label asp-for="IpAddress" class="form-label">IP адрес</label>
-                    <input asp-for="IpAddress" class="form-control" placeholder="192.168.1.1">
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="Os" class="form-label">Операционная система</label>
-                        <input asp-for="Os" class="form-control" placeholder="Windows Server 2022">
-                        </div>
-                        <div class="mb-3">
-                            <label asp-for="Criticality" class="form-label">Критичность *</label>
-                            <select asp-for="Criticality" class="form-select" required>
-                                <option value="">— Выберите —</option>
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                                <option value="Critical">Critical</option>
-                            </select>
-                            <span asp-validation-for="Criticality" class="text-danger"></span>
-                        </div>
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
             
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <div class="mb-3">
-                                <label asp-for="TenantId" class="form-label">Тенант</label>
-                                <select asp-for="TenantId" class="form-select">
-                                    <option value="">— Выберите тенант —</option>
-                                    @foreach (var tenant in ViewBag.Tenants)
-                                    {
-                                        <option value="@tenant.TenantId">@tenant.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                        else
-                        {
-                            // Для аналитика TenantId устанавливается автоматически
-                            <input type="hidden" asp-for="TenantId" value="@ViewBag.DefaultTenantId" />
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i>
-                                Актив будет привязан к вашему тенанту автоматически.
-                            </div>
-                        }
-                    </div>
-                </div>
+            <div class="mb-3">
+                <label asp-for="Type" class="form-label">Тип *</label>
+                <select asp-for="Type" class="form-select" required>
+                    <option value="">— Выберите тип —</option>
+                    <option value="Server">Server</option>
+                    <option value="Workstation">Workstation</option>
+                    <option value="Network">Network</option>
+                    <option value="Database">Database</option>
+                </select>
+                <span asp-validation-for="Type" class="text-danger"></span>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="IpAddress" class="form-label">IP адрес</label>
+                <input asp-for="IpAddress" class="form-control" placeholder="192.168.1.1">
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Os" class="form-label">Операционная система</label>
+                <input asp-for="Os" class="form-control" placeholder="Windows Server 2022">
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Criticality" class="form-label">Критичность *</label>
+                <select asp-for="Criticality" class="form-select" required>
+                    <option value="">— Выберите —</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                </select>
+                <span asp-validation-for="Criticality" class="text-danger"></span>
+            </div>
+            
+            <!-- ← ВЫБОР ТЕНАНТА -->
+            <div class="mb-3">
+                <label asp-for="TenantId" class="form-label">Тенант *</label>
+                <select asp-for="TenantId" class="form-select" required>
+                    <option value="">— Выберите тенант —</option>
+                    @foreach (var tenant in ViewBag.Tenants)
+                    {
+                        var selected = tenant.TenantId == ViewBag.SelectedTenantId ? "selected" : "";
+                        <option value="@tenant.TenantId" @@selected>
+                            @tenant.Name (@tenant.Subscription)
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="TenantId" class="text-danger"></span>
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> Актив будет привязан к выбранному тенанту
+                </small>
+            </div>
+        </div>
+    </div>
     
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-plus-circle"></i> Создать актив
-                </button>
-                <a asp-action="Assets" class="btn btn-secondary">Отмена</a>
-            </form>
+    <div class="alert alert-info">
+        <i class="bi bi-shield-check"></i> 
+        <strong>Примечание:</strong> При создании актива проверяется лимит выбранного тенанта.
+    </div>
+    
+    <button type="submit" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Создать актив
+    </button>
+    <a asp-action="Assets" class="btn btn-secondary">Отмена</a>
+</form>
 
-            @section Scripts {
-                @{
-                    await Html.RenderPartialAsync("_ValidationScriptsPartial");
-                }
-            }
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
