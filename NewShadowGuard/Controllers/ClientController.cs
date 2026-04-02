@@ -4,6 +4,7 @@ using NewShadowGuard.Attributes;
 using NewShadowGuard.Data;
 using NewShadowGuard.Models;
 using NewShadowGuard.Models.ViewModels;
+using NewShadowGuard.Services;
 
 namespace NewShadowGuard.Controllers
 {
@@ -156,8 +157,12 @@ namespace NewShadowGuard.Controllers
             var tenantId = GetCurrentUserTenantId();
             if (!tenantId.HasValue)
             {
-                return RedirectToAction("AccessDenied", "Account");
+                return RedirectToAction("NoTenant");
             }
+
+            var tenant = await _context.Tenants.FindAsync(tenantId.Value);
+            ViewBag.CurrentTenantId = tenantId.Value;
+            ViewBag.Tenant = tenant;
 
             var assets = await _context.Assets
                 .Where(a => a.TenantId == tenantId)

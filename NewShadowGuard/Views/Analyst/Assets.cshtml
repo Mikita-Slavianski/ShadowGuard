@@ -1,11 +1,34 @@
 ﻿@model List<NewShadowGuard.Models.Asset>
 @{
     ViewData["Title"] = "Активы";
+    
+    var isAdmin = ViewBag.IsAdmin as bool? ?? false;
+    var currentTenantId = ViewBag.CurrentTenantId as int? ?? 0;
+    var tenantLimits = ViewBag.TenantAssetLimits as List<NewShadowGuard.Controllers.TenantAssetLimitViewModel>;
+    var currentTenant = tenantLimits?.FirstOrDefault(t => t.TenantId == currentTenantId);
+    var totalAssets = Model?.Count ?? 0;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>💻 Активы</h2>
-    <a asp-action="CreateAsset" class="btn btn-success">➕ Создать</a>
+    
+    @if (isAdmin || currentTenantId == 0)
+    {
+        <a asp-action="CreateAsset" class="btn btn-success">➕ Создать</a>
+    }
+    else
+    {
+        @if (currentTenant != null && (currentTenant.IsUnlimited || currentTenant.AssetCount < currentTenant.MaxAssets))
+        {
+            <a asp-action="CreateAsset" class="btn btn-success">➕ Создать</a>
+        }
+        else
+        {
+            <button class="btn btn-secondary" disabled title="Превышен лимит активов">
+                ➕ Создать (лимит превышен)
+            </button>
+        }
+    }
 </div>
 
 @if (TempData["Success"] != null)
@@ -13,6 +36,109 @@
     <div class="alert alert-success alert-dismissible fade show">
         @TempData["Success"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Инфо о лимитах активов по всем тенантам -->
+@if (tenantLimits != null && tenantLimits.Count > 0)
+{
+    <div class="card mb-4 bg-light">
+        <div class="card-header">
+            <h5 class="mb-0">📊 Лимиты активов по тенантам</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                @foreach (var tenant in tenantLimits)
+                {
+                    // ← Вычисляем стили отдельно (более надёжно)
+                    var cardBorderClass = "border-success";
+                    var progressBarClass = "bg-success";
+                    var statusText = "✅ Норма";
+                    var statusIcon = "✅";
+                    
+                    if (tenant.IsUnlimited)
+                    {
+                        cardBorderClass = "border-success";
+                        statusText = "Enterprise план";
+                        statusIcon = "♾️";
+                    }
+                    else if (tenant.UsagePercentage >= 90)
+                    {
+                        cardBorderClass = "border-danger";
+                        progressBarClass = "bg-danger";
+                        statusText = "Критично!";
+                        statusIcon = "⚠️";
+                    }
+                    else if (tenant.UsagePercentage >= 70)
+                    {
+                        cardBorderClass = "border-warning";
+                        progressBarClass = "bg-warning";
+                        statusText = "Внимание";
+                        statusIcon = "⚠️";
+                    }
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card @cardBorderClass">
+                            <div class="card-body">
+                                <h6 class="card-title">@tenant.TenantName</h6>
+                                <p class="card-text small">
+                                    <strong>План:</strong> <span class="badge bg-info">@tenant.Plan</span><br>
+                                    <strong>Активы:</strong>
+                                    @if (tenant.IsUnlimited)
+                                    {
+                                        <span class="text-success">@statusIcon Без ограничений</span>
+                                    }
+                                    else
+                                    {
+                                        var textClass = tenant.UsagePercentage >= 90 ? "text-danger" :
+                                                       tenant.UsagePercentage >= 70 ? "text-warning" : "text-success";
+                                        <span class="@textClass">
+                                            @tenant.AssetCount / @tenant.MaxAssets
+                                        </span>
+                                    }
+                                </p>
+                                
+                                @if (tenant.IsUnlimited)
+                                {
+                                    <div class="alert alert-success py-2 mb-0">
+                                        <strong>@statusIcon @statusText</strong>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar @progressBarClass"
+                                             role="progressbar"
+                                             style="width: @Math.Min(tenant.UsagePercentage, 100)%"
+                                             aria-valuenow="@tenant.UsagePercentage"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted mt-1 d-block">
+                                        @statusIcon @statusText (@tenant.UsagePercentage%)
+                                    </small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> Тенанты не найдены
     </div>
 }
 
@@ -30,26 +156,48 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var asset in Model)
+        @if (Model != null && Model.Count > 0)
+        {
+            @foreach (var asset in Model)
+            {
+                <tr>
+                    <td>@asset.AssetId</td>
+                    <td>@asset.Name</td>
+                    <td>@asset.Type</td>
+                    <td><code>@asset.IpAddress</code></td>
+                    <td>@asset.Os</td>
+                    <td>
+                        <span class="badge
+                            @(asset.Criticality == "Critical" ? "bg-danger" :
+                                                            asset.Criticality == "High" ? "bg-warning" :
+                                                            asset.Criticality == "Medium" ? "bg-info" : "bg-secondary")">
+                            @asset.Criticality
+                        </span>
+                    </td>
+                    <td>
+                        @if (asset.Tenant != null)
+                        {
+                            <span class="badge @(string.Equals(asset.Tenant.Subscription, "Enterprise", StringComparison.OrdinalIgnoreCase) ? "bg-purple" : "bg-secondary")">
+                                @asset.Tenant.Name (@asset.Tenant.Subscription)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </td>
+                    <td>
+                        <a asp-action="EditAsset" asp-route-id="@asset.AssetId" class="btn btn-sm btn-outline-primary">✏️</a>
+                        <a asp-action="Logs" asp-route-assetId="@asset.AssetId" class="btn btn-sm btn-outline-secondary">📋</a>
+                    </td>
+                </tr>
+            }
+        }
+        else
         {
             <tr>
-                <td>@asset.AssetId</td>
-                <td>@asset.Name</td>
-                <td>@asset.Type</td>
-                <td><code>@asset.IpAddress</code></td>
-                <td>@asset.Os</td>
-                <td>
-                    <span class="badge
-                        @(asset.Criticality == "Critical" ? "bg-danger" :
-                                                    asset.Criticality == "High" ? "bg-warning" :
-                                                    asset.Criticality == "Medium" ? "bg-info" : "bg-secondary")">
-                        @asset.Criticality
-                    </span>
-                </td>
-                <td>@asset.Tenant?.Name</td>
-                <td>
-                    <a asp-action="EditAsset" asp-route-id="@asset.AssetId" class="btn btn-sm btn-outline-primary">✏️</a>
-                    <a asp-action="Logs" asp-route-assetId="@asset.AssetId" class="btn btn-sm btn-outline-secondary">📋</a>
+                <td colspan="8" class="text-center">
+                    <i class="bi bi-inbox"></i> Активы не найдены
                 </td>
             </tr>
         }

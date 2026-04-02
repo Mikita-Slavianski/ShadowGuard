@@ -9,6 +9,7 @@ using ClosedXML.Excel;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
+using NewShadowGuard.Services;
 
 namespace NewShadowGuard.Controllers
 {
@@ -166,54 +167,51 @@ namespace NewShadowGuard.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateUser(User user)
+        public async Task<IActionResult> CreateUser(User user, string password = "password123")
         {
-            ViewBag.Tenants = await _context.Tenants
-                .Where(t => t.Status == "Active")
-                .OrderBy(t => t.Name)
-                .ToListAsync();
+            ViewBag.Tenants = await _context.Tenants.Where(t => t.Status == "Active").ToListAsync();
 
             // Проверка на уникальность Email
-            var existingUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == user.Email);
-
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
             if (existingUser != null)
             {
                 ModelState.AddModelError("Email", "Пользователь с таким Email уже существует");
                 return View(user);
             }
 
-            // Проверка обязательных полей
-            if (string.IsNullOrEmpty(user.Email))
+            // ← ПРОВЕРКА ЛИМИТА ПОЛЬЗОВАТЕЛЕЙ
+            if (user.TenantId.HasValue)
             {
-                ModelState.AddModelError("Email", "Email обязателен");
-            }
-            if (string.IsNullOrEmpty(user.FullName))
-            {
-                ModelState.AddModelError("FullName", "Имя обязательно");
-            }
-            if (string.IsNullOrEmpty(user.Role))
-            {
-                ModelState.AddModelError("Role", "Роль обязательна");
+                var tenant = await _context.Tenants.FindAsync(user.TenantId.Value);
+                if (tenant != null)
+                {
+                    var limits = SubscriptionLimits.GetLimits(tenant.Subscription);
+                    var currentUserCount = await _context.Users.CountAsync(u => u.TenantId == tenant.TenantId);
+
+                    if (!SubscriptionLimits.HasUnlimitedUsers(tenant.Subscription) && currentUserCount >= limits.MaxUsers)
+                    {
+                        ModelState.AddModelError("",
+                            $"❌ Превышен лимит пользователей для плана {tenant.Subscription}. " +
+                            $"Максимум: {limits.MaxUsers}. Текущее: {currentUserCount}. " +
+                            $"Для увеличения лимита смените тарифный план.");
+                        return View(user);
+                    }
+                }
             }
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Генерируем хеш для пароля "password123"
-                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123");
+                    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
                     user.CreatedAt = DateTime.UtcNow;
                     user.IsActive = true;
-                    user.MfaEnabled = user.MfaEnabled;
 
                     _context.Users.Add(user);
                     await _context.SaveChangesAsync();
 
-                    await LogAuditAction("Create", "User", user.UserId,
-                        $"Создан пользователь: {user.Email} (Роль: {user.Role})");
-
-                    TempData["Success"] = $"Пользователь {user.Email} успешно создан! Пароль: password123";
+                    await LogAuditAction("Create", "User", user.UserId, $"Создан пользователь: {user.Email}");
+                    TempData["Success"] = "Пользователь успешно создан";
                     return RedirectToAction(nameof(Users));
                 }
                 catch (Exception ex)

@@ -5,7 +5,7 @@ using NewShadowGuard.Data;
 using NewShadowGuard.Models;
 using NewShadowGuard.Services;
 
-namespace CyberSecurityApp.Controllers
+namespace NewShadowGuard.Controllers
 {
     [CustomAuthorize("Analyst", "Admin")]
     public class AnalystController : Controller
@@ -157,12 +157,51 @@ namespace CyberSecurityApp.Controllers
                 .Include(a => a.Tenant)
                 .AsQueryable();
 
+            // ← ИСПРАВЛЕНО: Аналитик видит только активы СВОЕГО тенанта
+            // Админ видит ВСЕ активы (включая Enterprise)
             if (!isAdmin && tenantId.HasValue)
             {
                 query = query.Where(a => a.TenantId == tenantId);
             }
+            // Если аналитик без тенанта (tenantId = null) - показывает все активы
 
             var assets = await query.OrderByDescending(a => a.CreatedAt).ToListAsync();
+
+            // ПОЛУЧАЕМ ВСЕ ТЕНАНТЫ С ЛИМИТАМИ (для индикатора)
+            var allTenants = await _context.Tenants
+                .Where(t => t.Status == "Active")  // ← Показываем только активные тенанты
+                .ToListAsync();
+
+            var tenantAssetLimits = new List<TenantAssetLimitViewModel>();
+
+            foreach (var tenant in allTenants)
+            {
+                var limits = SubscriptionLimits.GetLimits(tenant.Subscription);
+                var assetCount = await _context.Assets.CountAsync(a => a.TenantId == tenant.TenantId);
+
+                // ← ИСПРАВЛЕНО: Правильная проверка на Enterprise
+                var isUnlimited = string.Equals(tenant.Subscription, "Enterprise", StringComparison.OrdinalIgnoreCase);
+
+                var percentage = isUnlimited ? 0 : (limits.MaxAssets > 0 ? (assetCount * 100 / limits.MaxAssets) : 0);
+
+                tenantAssetLimits.Add(new TenantAssetLimitViewModel
+                {
+                    TenantId = tenant.TenantId,
+                    TenantName = tenant.Name,
+                    Plan = tenant.Subscription,
+                    AssetCount = assetCount,
+                    MaxAssets = limits.MaxAssets,
+                    IsUnlimited = isUnlimited,  // ← Устанавливаем правильно
+                    UsagePercentage = percentage,
+                    Status = tenant.Status
+                });
+            }
+
+            ViewBag.TenantAssetLimits = tenantAssetLimits;
+            ViewBag.CurrentTenantId = tenantId.HasValue ? tenantId.Value : 0;
+            // ViewBag.IsAdmin = isAdmin ?? false;
+            ViewBag.TotalAssets = assets.Count;  // ← Для отладки
+
             return View(assets);
         }
 
@@ -192,6 +231,26 @@ namespace CyberSecurityApp.Controllers
                 asset.TenantId = GetCurrentUserTenantId();
             }
 
+            // ← ПРОВЕРКА ЛИМИТА АКТИВОВ
+            if (asset.TenantId.HasValue)
+            {
+                var tenant = await _context.Tenants.FindAsync(asset.TenantId.Value);
+                if (tenant != null)
+                {
+                    var limits = SubscriptionLimits.GetLimits(tenant.Subscription);
+                    var currentAssetCount = await _context.Assets.CountAsync(a => a.TenantId == tenant.TenantId);
+
+                    if (!SubscriptionLimits.HasUnlimitedAssets(tenant.Subscription) && currentAssetCount >= limits.MaxAssets)
+                    {
+                        ModelState.AddModelError("",
+                            $"❌ Превышен лимит активов для плана {tenant.Subscription}. " +
+                            $"Максимум: {limits.MaxAssets}. Текущее: {currentAssetCount}. " +
+                            $"Для увеличения лимита смените тарифный план.");
+                        return View(asset);
+                    }
+                }
+            }
+
             // Проверка на обязательные поля
             if (string.IsNullOrEmpty(asset.Name))
             {
@@ -214,9 +273,7 @@ namespace CyberSecurityApp.Controllers
                     _context.Assets.Add(asset);
                     await _context.SaveChangesAsync();
 
-                    await LogAuditAction("Create", "Asset", asset.AssetId,
-                        $"Создан актив: {asset.Name}");
-
+                    await LogAuditAction("Create", "Asset", asset.AssetId, $"Создан актив: {asset.Name}");
                     TempData["Success"] = "Актив успешно создан";
                     return RedirectToAction(nameof(Assets));
                 }
@@ -694,5 +751,17 @@ namespace CyberSecurityApp.Controllers
     {
         public string Field { get; set; }
         public string Value { get; set; }
+    }
+
+    public class TenantAssetLimitViewModel
+    {
+        public int TenantId { get; set; }
+        public string TenantName { get; set; }
+        public string Plan { get; set; }
+        public int AssetCount { get; set; }
+        public int MaxAssets { get; set; }
+        public bool IsUnlimited { get; set; }
+        public int UsagePercentage { get; set; }
+        public string Status { get; set; }
     }
 }

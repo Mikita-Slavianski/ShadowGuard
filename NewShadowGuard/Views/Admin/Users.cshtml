@@ -16,6 +16,64 @@
     </div>
 }
 
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Инфо о лимитах -->
+<div class="card mb-4 bg-light">
+    <div class="card-body">
+        <h6 class="card-title">📊 Лимиты по тенантам</h6>
+        <div class="row">
+            @foreach (var tenantGroup in Model.GroupBy(u => u.TenantId))
+            {
+                var tenantId = tenantGroup.Key;
+                var tenant = tenantGroup.First().Tenant;
+                if (tenant != null)
+                {
+                    var limits = NewShadowGuard.Services.SubscriptionLimits.GetLimits(tenant.Subscription);
+                    var userCount = tenantGroup.Count();
+                    var percentage = limits.MaxUsers > 0 ? (userCount * 100 / limits.MaxUsers) : 0;
+                    var isUnlimited = NewShadowGuard.Services.SubscriptionLimits.HasUnlimitedUsers(tenant.Subscription);
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">@tenant.Name</h6>
+                                <p class="card-text small">
+                                    <strong>План:</strong> @tenant.Subscription<br>
+                                    <strong>Пользователи:</strong>
+                                    @if (isUnlimited)
+                                    {
+                                        <span class="text-success">♾️ Без ограничений</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="@(percentage >= 90 ? "text-danger" : percentage >= 70 ? "text-warning" : "text-success")">
+                                            @userCount / @limits.MaxUsers
+                                        </span>
+                                    }
+                                </p>
+                                @if (!isUnlimited)
+                                {
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar @(percentage >= 90 ? "bg-danger" : percentage >= 70 ? "bg-warning" : "bg-success")"
+                                             role="progressbar" style="width: @Math.Min(percentage, 100)%"></div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
 <table class="table table-striped table-hover">
     <thead>
         <tr>
