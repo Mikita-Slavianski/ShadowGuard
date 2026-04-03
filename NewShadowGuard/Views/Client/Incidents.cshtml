@@ -5,27 +5,80 @@
 
 <h2 class="mb-4">🚨 Мои инциденты</h2>
 
-<!-- Фильтры -->
+<!-- Расширенные фильтры -->
 <div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">🔍 Фильтры</h5>
+    </div>
     <div class="card-body">
         <form asp-action="Incidents" method="get" class="row g-3">
-            <div class="col-md-6">
+            <!-- Статус -->
+            <div class="col-md-4">
                 <label class="form-label">Статус</label>
                 <select name="status" class="form-select">
                     <option value="">Все</option>
-                    <option value="New" selected=@(ViewBag.Status == "New" ? "selected" : "")>Новый</option>
-                    <option value="InProgress" selected=@(ViewBag.Status == "InProgress" ? "selected" : "")>В работе</option>
-                    <option value="Resolved" selected=@(ViewBag.Status == "Resolved" ? "selected" : "")>Решён</option>
+                    <option value="New" selected="@(ViewBag.Status == "New" ? "selected" : null)">Новый</option>
+                    <option value="InProgress" selected="@(ViewBag.Status == "InProgress" ? "selected" : null)">В работе</option>
+                    <option value="Resolved" selected="@(ViewBag.Status == "Resolved" ? "selected" : null)">Решён</option>
+                    <option value="FalsePositive" selected="@(ViewBag.Status == "FalsePositive" ? "selected" : null)">Ложное срабатывание</option>
                 </select>
             </div>
-            <div class="col-md-6 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary">Применить</button>
-                <a asp-action="Incidents" class="btn btn-secondary ms-2">Сбросить</a>
+
+            <!-- ← Актив -->
+            <div class="col-md-5">
+                <label class="form-label">Актив</label>
+                <select name="assetId" class="form-select">
+                    <option value="">Все активы</option>
+                    @foreach (var asset in ViewBag.Assets)
+                    {
+                        var selected = asset.AssetId == ViewBag.AssetId ? "selected" : "";
+                        <option value="@asset.AssetId" @@selected>
+                            @asset.Name (@asset.Type) - @asset.IpAddress
+                        </option>
+                    }
+                </select>
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i> Фильтрация по связанному активу
+                </small>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i> Применить
+                </button>
+                <a asp-action="Incidents" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Сброс
+                </a>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Активные фильтры (индикатор) -->
+@if (ViewBag.Status != null || ViewBag.AssetId != null)
+{
+    <div class="alert alert-info mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>📋 Активные фильтры:</strong>
+                @if (ViewBag.Status != null) { <span class="badge bg-info ms-2">Статус: @ViewBag.Status</span> }
+                @if (ViewBag.AssetId != null) 
+                { 
+                    var asset = (ViewBag.Assets as List<NewShadowGuard.Models.Asset>)
+                        ?.FirstOrDefault(a => a.AssetId == ViewBag.AssetId);
+                    var assetName = asset != null ? $"{asset.Name} ({asset.Type})" : "Актив #" + ViewBag.AssetId;
+                    <span class="badge bg-primary ms-2">Актив: @assetName</span> 
+                }
+            </div>
+            <a asp-action="Incidents" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Сбросить все
+            </a>
+        </div>
+    </div>
+}
+
+<!-- Таблица инцидентов -->
 <table class="table table-striped table-hover">
     <thead>
         <tr>
@@ -33,6 +86,7 @@
             <th>Название</th>
             <th>Критичность</th>
             <th>Статус</th>
+            <th>Связанный актив</th>
             <th>Дата</th>
             <th>Действия</th>
         </tr>
@@ -61,6 +115,18 @@
                           incident.Status == "Resolved" ? "Решён" : incident.Status)
                     </span>
                 </td>
+                <td>
+                    @if (incident.Log?.Asset != null)
+                    {
+                        <span class="badge bg-secondary">
+                            @incident.Log.Asset.Name
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                </td>
                 <td>@incident.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
                 <td>
                     <a asp-action="IncidentDetails" asp-route-id="@incident.IncidentId" 
@@ -70,3 +136,19 @@
         }
     </tbody>
 </table>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Инциденты не найдены по заданным фильтрам
+    </div>
+}
+
+<!-- Статистика -->
+<div class="text-muted mt-3">
+    Найдено: <strong>@Model.Count</strong> инцидент(ов)
+</div>
+
+<div class="text-center mb-4 mt-4">
+    <a asp-action="Index" class="btn btn-secondary">← Назад к дашборду</a>
+</div>

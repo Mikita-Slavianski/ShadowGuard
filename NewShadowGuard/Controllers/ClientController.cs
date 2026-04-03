@@ -108,26 +108,45 @@ namespace NewShadowGuard.Controllers
 
         #region Инциденты (только чтение)
 
-        public async Task<IActionResult> Incidents(string? status)
+        public async Task<IActionResult> Incidents(string? status, int? assetId)
         {
             var tenantId = GetCurrentUserTenantId();
             if (!tenantId.HasValue)
             {
-                return RedirectToAction("AccessDenied", "Account");
+                return RedirectToAction("NoTenant");
             }
 
             var query = _context.Incidents
                 .Include(i => i.Log)
-                .Where(i => i.TenantId == tenantId)
+                .Include(i => i.Tenant)
+                .Where(i => i.TenantId == tenantId)  // Клиент видит только свои инциденты
                 .AsQueryable();
 
+            // ← Фильтр по статусу
             if (!string.IsNullOrEmpty(status))
             {
                 query = query.Where(i => i.Status == status);
             }
 
-            var incidents = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
+            // ← Фильтр по активу (через связанный лог)
+            if (assetId.HasValue)
+            {
+                query = query.Where(i => i.Log.AssetId == assetId.Value);
+            }
+
+            var incidents = await query
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            // ← Загружаем активы для фильтра (только активы клиента)
+            ViewBag.Assets = await _context.Assets
+                .Where(a => a.TenantId == tenantId)
+                .OrderBy(a => a.Name)
+                .ToListAsync();
+
             ViewBag.Status = status;
+            ViewBag.AssetId = assetId;
+
             return View(incidents);
         }
 

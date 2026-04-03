@@ -116,16 +116,12 @@
     </div>
 }
 
-<!-- Таблица инцидентов -->
 <table class="table table-striped table-hover">
     <thead>
         <tr>
             <th>ID</th>
             <th>Название</th>
-            @if (ViewBag.IsAdmin)
-            {
-                <th>Тенант</th>
-            }
+            <th>Тенант</th>  <!-- ← Всегда отображается -->
             <th>Критичность</th>
             <th>Статус</th>
             <th>Дата создания</th>
@@ -138,31 +134,32 @@
             <tr>
                 <td>@incident.IncidentId</td>
                 <td>@incident.Title</td>
-                @if (ViewBag.IsAdmin)
-                {
-                    <td>@incident.Tenant?.Name</td>
-                }
                 <td>
-                    <span class="badge 
-                        @(incident.Severity == "Critical" ? "bg-danger" : 
-                          incident.Severity == "High" ? "bg-warning" : 
-                          incident.Severity == "Medium" ? "bg-info" : "bg-secondary")">
+                    <span class="badge bg-secondary">
+                        @incident.Tenant?.Name
+                    </span>
+                </td>
+                <td>
+                    <span class="badge
+                        @(incident.Severity == "Critical" ? "bg-danger" :
+                                                    incident.Severity == "High" ? "bg-warning" :
+                                                    incident.Severity == "Medium" ? "bg-info" : "bg-secondary")">
                         @incident.Severity
                     </span>
                 </td>
                 <td>
-                    <span class="badge 
-                        @(incident.Status == "New" ? "bg-warning" : 
-                          incident.Status == "InProgress" ? "bg-info" : 
-                          incident.Status == "Resolved" ? "bg-success" : "bg-secondary")">
-                        @(incident.Status == "InProgress" ? "В работе" : 
-                          incident.Status == "New" ? "Новый" : 
+                    <span class="badge
+                        @(incident.Status == "New" ? "bg-warning" :
+                                                    incident.Status == "InProgress" ? "bg-info" :
+                                                    incident.Status == "Resolved" ? "bg-success" : "bg-secondary")">
+                        @(incident.Status == "InProgress" ? "В работе" :
+                          incident.Status == "New" ? "Новый" :
                           incident.Status == "Resolved" ? "Решён" : incident.Status)
                     </span>
                 </td>
                 <td>@incident.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
                 <td>
-                    <a asp-action="IncidentDetails" asp-route-id="@incident.IncidentId" 
+                    <a asp-action="IncidentDetails" asp-route-id="@incident.IncidentId"
                        class="btn btn-sm btn-outline-primary">👁️</a>
                 </td>
             </tr>
