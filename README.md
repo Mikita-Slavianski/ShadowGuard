@@ -22,10 +22,12 @@ Frontend	Bootstrap 5, Chart.js
 Экспорт	ClosedXML, CsvHelper
 
 🚀 Быстрый старт
+
 Требования
 •	.NET 8 SDK
 •	Visual Studio 2022 или VS Code
 •	SQL Server LocalDB (входит в состав Visual Studio)
+
 Установка
 1.	Клонируйте репозиторий
 git clone https://github.com/yourusername/cybersecurity-app.git
