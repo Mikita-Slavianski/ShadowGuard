@@ -609,6 +609,128 @@ namespace NewShadowGuard.Controllers
 
         #endregion
 
+        #region Корреляция
+
+        public async Task<IActionResult> CorrelationRules()
+        {
+            var rules = await _context.CorrelationRules
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return View(rules);
+        }
+
+        public async Task<IActionResult> CreateCorrelationRule()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateCorrelationRule(CorrelationRule rule)
+        {
+            if (ModelState.IsValid)
+            {
+                rule.CreatedAt = DateTime.UtcNow;
+                rule.IsActive = true;
+
+                _context.CorrelationRules.Add(rule);
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("Create", "CorrelationRule", rule.RuleId,
+                    $"Создано правило корреляции: {rule.RuleName}");
+
+                TempData["Success"] = "Правило корреляции успешно создано";
+                return RedirectToAction(nameof(CorrelationRules));
+            }
+            return View(rule);
+        }
+
+        public async Task<IActionResult> EditCorrelationRule(int id)
+        {
+            var rule = await _context.CorrelationRules.FindAsync(id);
+            if (rule == null) return NotFound();
+            return View(rule);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditCorrelationRule(CorrelationRule rule)
+        {
+            if (ModelState.IsValid)
+            {
+                var existing = await _context.CorrelationRules.FindAsync(rule.RuleId);
+                if (existing != null)
+                {
+                    existing.RuleName = rule.RuleName;
+                    existing.Description = rule.Description;
+                    existing.EventType = rule.EventType;
+                    existing.Threshold = rule.Threshold;
+                    existing.TimeWindowMinutes = rule.TimeWindowMinutes;
+                    existing.Severity = rule.Severity;
+                    existing.IsActive = rule.IsActive;
+
+                    await _context.SaveChangesAsync();
+
+                    await LogAuditAction("Update", "CorrelationRule", rule.RuleId,
+                        $"Обновлено правило корреляции: {rule.RuleName}");
+
+                    TempData["Success"] = "Правило корреляции успешно обновлено";
+                }
+                return RedirectToAction(nameof(CorrelationRules));
+            }
+            return View(rule);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteCorrelationRule(int id)
+        {
+            var rule = await _context.CorrelationRules.FindAsync(id);
+            if (rule != null)
+            {
+                _context.CorrelationRules.Remove(rule);
+                await _context.SaveChangesAsync();
+
+                await LogAuditAction("Delete", "CorrelationRule", id,
+                    $"Удалено правило корреляции: {rule.RuleName}");
+
+                TempData["Success"] = "Правило корреляции успешно удалено";
+            }
+            return RedirectToAction(nameof(CorrelationRules));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RunCorrelationManual()
+        {
+            var userId = GetCurrentUserUserId();
+            var correlationService = new CorrelationService(_context);
+
+            var result = await correlationService.RunCorrelation(userId);
+
+            await LogAuditAction("RunCorrelation", "CorrelationRun", null,
+                $"Запущена корреляция. Проверено правил: {result.RulesChecked}, Создано инцидентов: {result.IncidentsCreated}");
+
+            TempData["Success"] = $"✅ Корреляция завершена за {result.DurationSeconds} сек. " +
+                                 $"Проверено правил: {result.RulesChecked}, Создано инцидентов: {result.IncidentsCreated}";
+
+            return RedirectToAction(nameof(CorrelationRules));
+        }
+
+        public async Task<IActionResult> CorrelationHistory()
+        {
+            var history = await _context.CorrelationRuns
+                .Include(r => r.RunByUser)
+                .OrderByDescending(r => r.RunAt)
+                .Take(50)
+                .ToListAsync();
+
+            return View(history);
+        }
+
+        #endregion
+
         #region Вспомогательные методы
 
         private int? GetCurrentUserTenantId()

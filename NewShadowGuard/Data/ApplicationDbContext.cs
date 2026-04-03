@@ -17,6 +17,8 @@ namespace NewShadowGuard.Data
         public DbSet<Comment> Comments { get; set; }
         public DbSet<BlockedIP> BlockedIPs { get; set; }
         public DbSet<IncidentTag> IncidentTags { get; set; }
+        public DbSet<CorrelationRule> CorrelationRules { get; set; }
+        public DbSet<CorrelationRun> CorrelationRuns { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,6 +34,8 @@ namespace NewShadowGuard.Data
             modelBuilder.Entity<Comment>().ToTable("Comment");
             modelBuilder.Entity<BlockedIP>().ToTable("BlockedIP");
             modelBuilder.Entity<IncidentTag>().ToTable("IncidentTag");
+            modelBuilder.Entity<CorrelationRule>().ToTable("CorrelationRule");
+            modelBuilder.Entity<CorrelationRun>().ToTable("CorrelationRun");
         }
     }
 }
