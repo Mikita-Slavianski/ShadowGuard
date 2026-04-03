@@ -30,7 +30,7 @@ Frontend	Bootstrap 5, Chart.js
 
 Установка
 1.	Клонируйте репозиторий
-git clone https://github.com/yourusername/cybersecurity-app.git
+git clone https://github.com/Mikita-Slavianski/ShadowGuard
 cd cybersecurity-app
 2.	Создайте базу данных
 o	Откройте Database/01_CreateDatabase.sql в SQL Server Management Studio или Visual Studio
