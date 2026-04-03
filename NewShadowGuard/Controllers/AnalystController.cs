@@ -38,9 +38,9 @@ namespace NewShadowGuard.Controllers
 
         #region Инциденты
 
-        public async Task<IActionResult> Incidents(string? status, string? severity)
+        public async Task<IActionResult> Incidents(string? status, string? severity, int? tenantId, DateTime? dateFrom, DateTime? dateTo)
         {
-            var tenantId = GetCurrentUserTenantId();
+            var currentTenantId = GetCurrentUserTenantId();
             var isAdmin = IsAdmin();
 
             var query = _context.Incidents
@@ -48,28 +48,55 @@ namespace NewShadowGuard.Controllers
                 .Include(i => i.Tenant)
                 .AsQueryable();
 
-            // Админ видит все, аналитик только своего тенанта
-            if (!isAdmin && tenantId.HasValue)
+            // ← Фильтрация по тенанту (если выбран в фильтре)
+            if (tenantId.HasValue)
             {
-                query = query.Where(i => i.TenantId == tenantId);
+                query = query.Where(i => i.TenantId == tenantId.Value);
             }
+            // ← Если тенант не выбран в фильтре, аналитик видит все инциденты
+            // (админ тоже видит все)
 
+            // Фильтр по статусу
             if (!string.IsNullOrEmpty(status))
             {
                 query = query.Where(i => i.Status == status);
             }
 
+            // Фильтр по критичности
             if (!string.IsNullOrEmpty(severity))
             {
                 query = query.Where(i => i.Severity == severity);
+            }
+
+            // Фильтр по дате (с)
+            if (dateFrom.HasValue)
+            {
+                query = query.Where(i => i.CreatedAt >= dateFrom.Value);
+            }
+
+            // Фильтр по дате (по)
+            if (dateTo.HasValue)
+            {
+                query = query.Where(i => i.CreatedAt < dateTo.Value.AddDays(1));
             }
 
             var incidents = await query
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
+            // ← Загружаем ВСЕ тенанты для фильтра (и для админа, и для аналитика)
+            ViewBag.Tenants = await _context.Tenants
+                .Where(t => t.Status == "Active")
+                .OrderBy(t => t.Name)
+                .ToListAsync();
+
             ViewBag.Status = status;
             ViewBag.Severity = severity;
+            ViewBag.TenantId = tenantId;
+            ViewBag.DateFrom = dateFrom;
+            ViewBag.DateTo = dateTo;
+            ViewBag.IsAdmin = isAdmin;
+            ViewBag.CurrentTenantId = currentTenantId;
 
             return View(incidents);
         }

@@ -10,47 +10,125 @@
     </a>
 </div>
 
-<!-- Фильтры -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<!-- Расширенные фильтры -->
 <div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">🔍 Фильтры</h5>
+    </div>
     <div class="card-body">
         <form asp-action="Incidents" method="get" class="row g-3">
-            <div class="col-md-4">
+            <!-- Статус -->
+            <div class="col-md-3">
                 <label class="form-label">Статус</label>
                 <select name="status" class="form-select">
                     <option value="">Все</option>
-                    <option value="New" selected=@(ViewBag.Status == "New" ? "selected" : "")>Новый</option>
-                    <option value="InProgress" selected=@(ViewBag.Status == "InProgress" ? "selected" : "")>В работе</option>
-                    <option value="Resolved" selected=@(ViewBag.Status == "Resolved" ? "selected" : "")>Решён</option>
-                    <option value="FalsePositive" selected=@(ViewBag.Status == "FalsePositive" ? "selected" : "")>Ложное срабатывание</option>
+                    <option value="New" selected="@(ViewBag.Status == "New" ? "selected" : null)">Новый</option>
+                    <option value="InProgress" selected="@(ViewBag.Status == "InProgress" ? "selected" : null)">В работе</option>
+                    <option value="Resolved" selected="@(ViewBag.Status == "Resolved" ? "selected" : null)">Решён</option>
+                    <option value="FalsePositive" selected="@(ViewBag.Status == "FalsePositive" ? "selected" : null)">Ложное срабатывание</option>
                 </select>
             </div>
-            <div class="col-md-4">
+
+            <!-- Критичность -->
+            <div class="col-md-3">
                 <label class="form-label">Критичность</label>
                 <select name="severity" class="form-select">
                     <option value="">Все</option>
-                    <option value="Critical" selected=@(ViewBag.Severity == "Critical" ? "selected" : "")>Critical</option>
-                    <option value="High" selected=@(ViewBag.Severity == "High" ? "selected" : "")>High</option>
-                    <option value="Medium" selected=@(ViewBag.Severity == "Medium" ? "selected" : "")>Medium</option>
-                    <option value="Low" selected=@(ViewBag.Severity == "Low" ? "selected" : "")>Low</option>
+                    <option value="Critical" selected="@(ViewBag.Severity == "Critical" ? "selected" : null)">Critical</option>
+                    <option value="High" selected="@(ViewBag.Severity == "High" ? "selected" : null)">High</option>
+                    <option value="Medium" selected="@(ViewBag.Severity == "Medium" ? "selected" : null)">Medium</option>
+                    <option value="Low" selected="@(ViewBag.Severity == "Low" ? "selected" : null)">Low</option>
                 </select>
             </div>
+
+            <!-- ← Тенант (для всех: админ и аналитик) -->
+            <div class="col-md-3">
+                <label class="form-label">Тенант</label>
+                <select name="tenantId" class="form-select">
+                    <option value="">Все</option>
+                    @foreach (var tenant in ViewBag.Tenants)
+                    {
+                        var selected = tenant.TenantId == ViewBag.TenantId ? "selected" : "";
+                        <option value="@tenant.TenantId" @@selected>
+                            @tenant.Name (@tenant.Subscription)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <!-- Дата (с) -->
+            <div class="col-md-2">
+                <label class="form-label">Дата (с)</label>
+                <input type="date" name="dateFrom" class="form-control" 
+                       value="@(ViewBag.DateFrom?.ToString("yyyy-MM-dd") ?? "")">
+            </div>
+
+            <!-- Дата (по) -->
+            <div class="col-md-2">
+                <label class="form-label">Дата (по)</label>
+                <input type="date" name="dateTo" class="form-control" 
+                       value="@(ViewBag.DateTo?.ToString("yyyy-MM-dd") ?? "")">
+            </div>
+
+            <!-- Кнопки -->
             <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary">Применить фильтры</button>
-                <a asp-action="Incidents" class="btn btn-secondary ms-2">Сбросить</a>
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel"></i> Применить
+                </button>
+                <a asp-action="Incidents" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Сброс
+                </a>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Активные фильтры (индикатор) -->
+@if (ViewBag.Status != null || ViewBag.Severity != null || ViewBag.TenantId != null || ViewBag.DateFrom != null || ViewBag.DateTo != null)
+{
+    <div class="alert alert-info mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>📋 Активные фильтры:</strong>
+                @if (ViewBag.Status != null) { <span class="badge bg-info ms-2">Статус: @ViewBag.Status</span> }
+                @if (ViewBag.Severity != null) { <span class="badge bg-warning ms-2">Критичность: @ViewBag.Severity</span> }
+                @if (ViewBag.TenantId != null) 
+                { 
+                    var tenantName = (ViewBag.Tenants as List<NewShadowGuard.Models.Tenant>)
+                        ?.FirstOrDefault(t => t.TenantId == ViewBag.TenantId)?.Name ?? "Тенант #" + ViewBag.TenantId;
+                    <span class="badge bg-primary ms-2">Тенант: @tenantName</span> 
+                }
+                @if (ViewBag.DateFrom != null) { <span class="badge bg-success ms-2">С: @ViewBag.DateFrom?.ToString("dd.MM.yyyy")</span> }
+                @if (ViewBag.DateTo != null) { <span class="badge bg-success ms-2">По: @ViewBag.DateTo?.ToString("dd.MM.yyyy")</span> }
+            </div>
+            <a asp-action="Incidents" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Сбросить все
+            </a>
+        </div>
+    </div>
+}
+
+<!-- Таблица инцидентов -->
 <table class="table table-striped table-hover">
     <thead>
         <tr>
             <th>ID</th>
             <th>Название</th>
-            <th>Тенант</th>
+            @if (ViewBag.IsAdmin)
+            {
+                <th>Тенант</th>
+            }
             <th>Критичность</th>
             <th>Статус</th>
-            <th>Дата</th>
+            <th>Дата создания</th>
             <th>Действия</th>
         </tr>
     </thead>
@@ -60,7 +138,10 @@
             <tr>
                 <td>@incident.IncidentId</td>
                 <td>@incident.Title</td>
-                <td>@incident.Tenant?.Name</td>
+                @if (ViewBag.IsAdmin)
+                {
+                    <td>@incident.Tenant?.Name</td>
+                }
                 <td>
                     <span class="badge 
                         @(incident.Severity == "Critical" ? "bg-danger" : 
@@ -88,3 +169,15 @@
         }
     </tbody>
 </table>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Инциденты не найдены по заданным фильтрам
+    </div>
+}
+
+<!-- Статистика -->
+<div class="text-muted mt-3">
+    Найдено: <strong>@Model.Count</strong> инцидент(ов)
+</div>
